@@ -1,0 +1,111 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #0d111b;
+  color: #eef2ff;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+.unlock {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+
+.unlock header {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.unlock__logo {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #d4a017, #f0c14b);
+  font-size: 22px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+header p {
+  margin: 6px 0 0;
+  color: #a8b0c2;
+}
+
+.unlock__form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: #c7cede;
+}
+
+.field textarea,
+.field input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: #111827;
+  color: #f8fafc;
+  padding: 12px;
+  font: inherit;
+}
+
+.btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 16px;
+  background: linear-gradient(135deg, #d4a017, #f0c14b);
+  color: #17130a;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn--ghost {
+  background: #1f2937;
+  color: #f8fafc;
+}
+
+.result {
+  margin-top: 24px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.result h2 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.result code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-size: 16px;
+}
+
+.result__actions {
+  margin-top: 12px;
+}
+
+.error {
+  margin-top: 16px;
+  color: #fca5a5;
+}

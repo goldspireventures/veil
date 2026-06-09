@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unlock [redacted]</title>
+    <link rel="stylesheet" href="unlock.css" />
+  </head>
+  <body>
+    <main class="unlock">
+      <h1>Unlock [redacted]</h1>
+      <p>Backup unlock page — use the bookmarklet or extension on the original message when possible.</p>
+      <form id="unlock-form">
+        <label>Paste message containing [redacted]</label>
+        <textarea id="securedText" rows="4" placeholder="Paste the full message here"></textarea>
+        <label>Passphrase or one-time code</label>
+        <input id="secret" type="password" required />
+        <button type="submit" class="btn">Unlock</button>
+      </form>
+      <section id="result" hidden>
+        <h2>Unlocked</h2>
+        <code id="result-value"></code>
+        <button type="button" id="copy-result" class="btn btn--ghost">Copy</button>
+      </section>
+      <p id="error" class="error" hidden></p>
+    </main>
+    <script src="browser.js"></script>
+    <script src="crypto.js"></script>
+    <script src="marker.js"></script>
+    <script src="redacted.js"></script>
+    <script src="unlock.js"></script>
+  </body>
+</html>
