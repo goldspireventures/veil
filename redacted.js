@@ -29,13 +29,23 @@
     return /^https:\/\/.+/i.test(String(value || '').trim());
   }
 
-  function getUnlockBaseUrl(settings, { forEmail = false } = {}) {
+  function builtInPublicUnlockUrl() {
+    return global.GoldspireConstants?.BUILT_IN_PUBLIC_UNLOCK_URL
+      || 'https://goldspire-global.github.io/secure-text/unlock.html';
+  }
+
+  /** Custom org URL if set; otherwise the Goldspire-hosted page (zero setup). */
+  function resolvePublicUnlockUrl(settings) {
     const custom = settings?.publicUnlockUrl?.trim();
     if (isHttpsUrl(custom)) return custom.replace(/#.*$/, '').replace(/\/$/, '');
-    if (forEmail) return '';
+    return builtInPublicUnlockUrl();
+  }
+
+  function getUnlockBaseUrl(settings, { forEmail = false } = {}) {
+    if (forEmail) return resolvePublicUnlockUrl(settings);
     const runtime = global.GoldspireBrowser?.runtime || global.chrome?.runtime || global.browser?.runtime;
     if (runtime?.getURL) return runtime.getURL('unlock/unlock.html');
-    return '';
+    return resolvePublicUnlockUrl(settings);
   }
 
   function buildUnlockHref(fullMarker, unlockBaseUrl) {
@@ -176,12 +186,7 @@
 
   async function insertRichRedacted(resolved, fullMarker, settings) {
     const unlockBaseUrl = getUnlockBaseUrl(settings, { forEmail: true });
-    if (!unlockBaseUrl) {
-      throw new Error('PUBLIC_UNLOCK_URL_REQUIRED');
-    }
-
     const href = buildUnlockHref(fullMarker, unlockBaseUrl);
-    if (!href) throw new Error('PUBLIC_UNLOCK_URL_REQUIRED');
 
     const range = resolved.range.cloneRange();
     const editableRoot = findComposeRoot(resolved);
@@ -388,15 +393,9 @@
     return { kind: 'token', node: link, fullMarker, display: LABEL, unlockBaseUrl };
   }
 
-  function needsPublicUnlockUrl(settings) {
-    return isEmailCompose() && !isHttpsUrl(settings?.publicUnlockUrl);
-  }
-
-  function publicUnlockUrlErrorMessage() {
-    return 'Gmail and Outlook only keep https:// links in email. Set Public unlock page URL in extension settings (host the unlock/ folder on GitHub Pages or Netlify).';
-  }
-
   global.GoldspireRedacted = {
+    builtInPublicUnlockUrl,
+    resolvePublicUnlockUrl,
     LABEL,
     formatPlain,
     createLink,
@@ -414,8 +413,6 @@
     isRedactedToken,
     isEmailCompose,
     isRichEmailContext,
-    needsPublicUnlockUrl,
-    publicUnlockUrlErrorMessage,
     resolveSelection,
     insertRedacted,
     markerToAttr,

@@ -8,22 +8,43 @@
   </head>
   <body>
     <main class="unlock">
-      <h1>Unlock [redacted]</h1>
-      <p>Backup unlock page — use the bookmarklet or extension on the original message when possible.</p>
-      <form id="unlock-form">
-        <label>Paste message containing [redacted]</label>
-        <textarea id="securedText" rows="4" placeholder="Paste the full message here"></textarea>
-        <label>Passphrase or one-time code</label>
-        <input id="secret" type="password" required />
+      <header class="unlock__header">
+        <div class="unlock__logo" aria-hidden="true">🔒</div>
+        <div>
+          <h1>Unlock [redacted]</h1>
+          <p id="subtitle">Enter the passphrase shared with you.</p>
+        </div>
+      </header>
+
+      <form id="unlock-form" class="unlock__form">
+        <label id="paste-field" class="field">
+          <span>Paste message containing [redacted]</span>
+          <textarea id="securedText" rows="4" placeholder="Paste the full message here"></textarea>
+        </label>
+        <label class="field">
+          <span id="secret-label">Passphrase</span>
+          <input id="secret" type="password" autocomplete="off" required />
+        </label>
         <button type="submit" class="btn">Unlock</button>
       </form>
-      <section id="result" hidden>
+
+      <section id="result" class="result" hidden>
         <h2>Unlocked</h2>
         <code id="result-value"></code>
-        <button type="button" id="copy-result" class="btn btn--ghost">Copy</button>
+        <div class="result__actions">
+          <button type="button" id="copy-result" class="btn btn--ghost">Copy</button>
+        </div>
       </section>
+
       <p id="error" class="error" hidden></p>
+
+      <p id="link-hint" class="hint" hidden>
+        Opened from email? This page is normal when using the Outlook desktop app.
+        For an in-page popup, read the message in Gmail or Outlook <strong>in your browser</strong> with the extension installed.
+      </p>
     </main>
+    <script src="constants.js"></script>
+    <script src="constants.js"></script>
     <script src="browser.js"></script>
     <script src="crypto.js"></script>
     <script src="marker.js"></script>
