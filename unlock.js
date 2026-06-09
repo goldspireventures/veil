@@ -7,17 +7,9 @@ const result = document.getElementById('result');
 const resultValue = document.getElementById('result-value');
 const error = document.getElementById('error');
 const copyButton = document.getElementById('copy-result');
-const linkHint = document.getElementById('link-hint');
-
-const usernameField = document.getElementById('username-field');
-const usernameInput = document.getElementById('username');
 
 let unlocked = '';
 let linkMarker = null;
-
-if (globalThis.GoldspireConstants?.ONEPASSWORD_LOGIN_USERNAME && usernameInput) {
-  usernameInput.value = GoldspireConstants.ONEPASSWORD_LOGIN_USERNAME;
-}
 
 function showError(message) {
   error.hidden = false;
@@ -35,8 +27,7 @@ function markerFromHash() {
   const raw = location.hash.replace(/^#/, '');
   if (!raw) return null;
   try {
-    const decoded = decodeURIComponent(raw);
-    return resolveMarker(decoded);
+    return resolveMarker(decodeURIComponent(raw));
   } catch {
     return resolveMarker(raw);
   }
@@ -45,9 +36,7 @@ function markerFromHash() {
 function setupLinkMode() {
   pasteField.hidden = true;
   securedText.removeAttribute('required');
-  usernameField.hidden = false;
-  subtitle.textContent = 'Use your 1Password Login item — click the icon in the password field or press Ctrl+\\.';
-  linkHint.hidden = false;
+  subtitle.textContent = 'Enter the passphrase shared with you.';
   secretInput.focus();
 }
 
@@ -63,15 +52,14 @@ form.addEventListener('submit', async (event) => {
 
   try {
     unlocked = await GoldspireSecureCrypto.decryptText(marker.payload, secretInput.value.trim(), {
-      profile: marker.mode === 'one-time' ? 'personal' : 'personal',
+      profile: 'personal',
     });
     resultValue.textContent = unlocked;
     result.hidden = false;
     form.hidden = true;
-    linkHint.hidden = true;
     copyButton.focus();
-  } catch (err) {
-    showError(err instanceof Error && !err.message.includes('at least') ? 'Wrong passphrase or corrupted link.' : err.message);
+  } catch {
+    showError('Wrong passphrase or corrupted link.');
   }
 });
 

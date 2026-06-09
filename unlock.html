@@ -16,18 +16,14 @@
         </div>
       </header>
 
-      <form id="unlock-form" class="unlock__form" method="post" action="#" autocomplete="on">
+      <form id="unlock-form" class="unlock__form" method="post" action="#">
         <label id="paste-field" class="field">
           <span>Paste message containing [redacted]</span>
           <textarea id="securedText" rows="4" placeholder="Paste the full message here"></textarea>
         </label>
-        <label class="field" id="username-field">
-          <span>Account</span>
-          <input id="username" name="username" type="text" value="goldspire-team" readonly autocomplete="username" spellcheck="false" data-1p-ignore="false" />
-        </label>
         <label class="field">
           <span id="secret-label">Passphrase</span>
-          <input id="secret" name="password" type="password" autocomplete="current-password" required spellcheck="false" data-1p-ignore="false" />
+          <input id="secret" name="passphrase" type="password" autocomplete="current-password" required />
         </label>
         <button type="submit" class="btn">Unlock</button>
       </form>
@@ -41,10 +37,6 @@
       </section>
 
       <p id="error" class="error" hidden></p>
-
-      <p id="link-hint" class="hint" hidden>
-        Opened from email? Use 1Password on the password field (Ctrl+\\ or the 1Password icon).
-      </p>
     </main>
     <script src="constants.js"></script>
     <script src="constants.js"></script>
