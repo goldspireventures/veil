@@ -2,6 +2,8 @@
 
 Browser extension + hosted unlock page for **[redacted]** inline secrets in email, Jira, forms, and anywhere on the web.
 
+**New machine?** → **[SETUP.md](SETUP.md)** (clone, `.env`, PowerShell/npm workaround, load extension, cloud API).
+
 ## Repository layout
 
 | Path | Purpose |
@@ -18,6 +20,8 @@ Browser extension + hosted unlock page for **[redacted]** inline secrets in emai
 ```bash
 npm run env:apply   # writes extension/src/constants.js from .env
 ```
+
+**Windows PowerShell:** if `npm` is blocked by execution policy, use `npm.cmd run env:apply` or `node scripts/apply-env.mjs`.
 
 Key variables:
 
