@@ -9,8 +9,8 @@
   const MAX_PLAINTEXT_LENGTH = 4096;
   const MAX_PAYLOAD_BYTES = 64 * 1024;
   const ONE_TIME_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const ITERATIONS = {
-    personal: 310_000,
+  const ITERATIONS = global.GoldspireConstants?.CRYPTO_ITERATIONS || {
+    personal: 600_000,
     organization: 600_000,
   };
 
@@ -48,10 +48,14 @@
     return ITERATIONS[profile] || ITERATIONS.personal;
   }
 
-  function validatePassphrase(passphrase, profile = 'personal') {
-    const minLength = profile === 'organization' ? 12 : 8;
-    if (!passphrase || passphrase.length < minLength) {
-      throw new Error(`Passphrase must be at least ${minLength} characters.`);
+  function validatePassphrase(passphrase, profile = 'personal', options = {}) {
+    if (global.GoldspirePassphrasePolicy?.assertPassphrase) {
+      global.GoldspirePassphrasePolicy.assertPassphrase(passphrase, profile, options);
+    } else {
+      const minLength = profile === 'organization' ? 16 : 12;
+      if (!passphrase || passphrase.length < minLength) {
+        throw new Error(`Passphrase must be at least ${minLength} characters.`);
+      }
     }
     if (passphrase.length > MAX_PASSPHRASE_LENGTH) {
       throw new Error('Passphrase is too long.');
@@ -111,6 +115,7 @@
       t: plaintext,
       mode: options.mode || 'team',
       exp: options.expiresAt || null,
+      burn: Boolean(options.burnAfterRead),
       created: Date.now(),
     });
   }
@@ -130,11 +135,12 @@
   async function encryptText(plaintext, passphrase, options = {}) {
     const profile = options.profile || 'personal';
     validatePlaintext(plaintext);
-    validatePassphrase(passphrase, options.mode === 'one-time' ? 'personal' : profile);
+    const cryptoProfile = options.mode === 'one-time' ? 'personal' : profile;
+    validatePassphrase(passphrase, cryptoProfile, { mode: options.mode });
 
     const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
     const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
-    const key = await deriveKey(passphrase, salt, profile);
+    const key = await deriveKey(passphrase, salt, cryptoProfile);
     const encoder = new TextEncoder();
     const aad = encoder.encode(`gs|v2|${options.mode || 'team'}`);
     const ciphertext = await crypto.subtle.encrypt(
@@ -146,9 +152,11 @@
     return bytesToBase64Url(concatBytes(salt, iv, new Uint8Array(ciphertext)));
   }
 
-  async function decryptText(payload, passphrase, options = {}) {
+  async function decryptEnvelope(payload, passphrase, options = {}) {
     const profile = options.profile || 'personal';
-    validatePassphrase(passphrase, profile);
+    if (!passphrase || passphrase.length > MAX_PASSPHRASE_LENGTH) {
+      throw new Error('Wrong passphrase or corrupted secured text.');
+    }
 
     const bytes = base64UrlToBytes(payload);
     if (bytes.length < SALT_BYTES + IV_BYTES + 16 || bytes.length > MAX_PAYLOAD_BYTES) {
@@ -188,12 +196,18 @@
       throw new Error('This secured text has expired.');
     }
 
-    return envelope.t;
+    return { text: envelope.t, envelope, mode: envelope.mode || 'team' };
+  }
+
+  async function decryptText(payload, passphrase, options = {}) {
+    const { text } = await decryptEnvelope(payload, passphrase, options);
+    return text;
   }
 
   global.GoldspireSecureCrypto = {
     encryptText,
     decryptText,
+    decryptEnvelope,
     generateOneTimeCode,
     unpackEnvelope,
     validatePassphrase,

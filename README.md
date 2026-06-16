@@ -4,13 +4,13 @@ Public unlock page for **[redacted]** links in Gmail, Outlook, and other email c
 
 Email clients only keep **https://** links. This site lets recipients click `[redacted]` in a message and unlock the secret with the team passphrase or one-time code.
 
-## Live URL (after GitHub Pages is enabled)
+## Live URL
 
 ```
 https://goldspire-global.github.io/secure-text/unlock.html
 ```
 
-Paste that URL in the extension: **Popup → Settings → Public unlock page URL**.
+Paste that URL in the extension: **Popup → Settings → Public unlock page URL** (or leave blank for the built-in default).
 
 ## How it works
 
@@ -25,7 +25,9 @@ Paste that URL in the extension: **Popup → Settings → Public unlock page URL
 |------|---------|
 | `unlock.html` | Unlock UI |
 | `unlock.js` | Reads hash / pasted text, decrypts client-side |
-| `crypto.js`, `marker.js`, `redacted.js`, `browser.js` | Shared crypto + marker logic |
+| `unlock.css` | Hosted unlock page styles |
+| `crypto.js`, `marker.js`, `redacted.js`, `browser.js`, `constants.js` | Shared crypto + marker logic |
+| `passphrase-policy.js`, `burn-list.js` | Passphrase validation + one-time burn list |
 
 ## Updating
 

@@ -40,6 +40,10 @@ function setupLinkMode() {
   secretInput.focus();
 }
 
+function fullMarkerFor(marker) {
+  return marker.fullMarker || marker.full || securedText.value || location.hash.slice(1) || '';
+}
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   error.hidden = true;
@@ -50,16 +54,60 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
+  const fullMarker = fullMarkerFor(marker);
+  const isOneTime = marker.mode === 'one-time' || marker.version === '2';
+
+  if (await GoldspireBurnList?.isBurned?.(fullMarker)) {
+    showError('This one-time message was already unlocked on this device.');
+    return;
+  }
+
+  const rateLimit = await GoldspireBurnList?.checkRateLimit?.(fullMarker);
+  if (rateLimit && !rateLimit.allowed) {
+    showError(rateLimit.message);
+    return;
+  }
+
   try {
-    unlocked = await GoldspireSecureCrypto.decryptText(marker.payload, secretInput.value.trim(), {
-      profile: 'personal',
-    });
+    const profiles = ['personal', 'organization'];
+    let decrypted = null;
+    let lastError = null;
+
+    for (const profile of profiles) {
+      try {
+        decrypted = await GoldspireSecureCrypto.decryptEnvelope(marker.payload, secretInput.value.trim(), {
+          profile,
+          mode: isOneTime ? 'one-time' : 'team',
+        });
+        break;
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
+    if (!decrypted) {
+      await GoldspireBurnList?.recordFailure?.(fullMarker);
+      throw lastError || new Error('Wrong passphrase');
+    }
+
+    await GoldspireBurnList?.clearFailures?.(fullMarker);
+    unlocked = decrypted.text;
+
+    if (isOneTime || decrypted.envelope?.burn) {
+      await GoldspireBurnList?.burn?.(fullMarker);
+    }
+
     resultValue.textContent = unlocked;
     result.hidden = false;
     form.hidden = true;
     copyButton.focus();
-  } catch {
-    showError('Wrong passphrase or corrupted link.');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Wrong passphrase or corrupted link.';
+    showError(
+      message.includes('expired') || message.includes('at least')
+        ? message
+        : 'Wrong passphrase or corrupted link.',
+    );
   }
 });
 

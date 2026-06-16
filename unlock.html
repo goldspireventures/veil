@@ -3,6 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'self';"
+    />
     <title>Unlock [redacted]</title>
     <link rel="stylesheet" href="unlock.css" />
   </head>
@@ -38,12 +42,13 @@
 
       <p id="error" class="error" hidden></p>
     </main>
-    <script src="constants.js"></script>
-    <script src="constants.js"></script>
-    <script src="browser.js"></script>
-    <script src="crypto.js"></script>
-    <script src="marker.js"></script>
-    <script src="redacted.js"></script>
-    <script src="unlock.js"></script>
+    <script src="constants.js" integrity="sha384-JJSjf5cu8Py89jo/N2sfRCjD+Nuljaullgzmnbd7csTNGD+N3cwYwAezkcJcZZgB" crossorigin="anonymous"></script>
+    <script src="passphrase-policy.js" integrity="sha384-FAHAOF9pLMdc1vspwFSgDKKafolmbDD3GJf8kVHdb37bmLscqs9JfVEaYM2rh08l" crossorigin="anonymous"></script>
+    <script src="burn-list.js" integrity="sha384-E9kv9EhXQj32kcaRtBdlOKnpqmXHnnA7Cu7It2bY8gWt7UEGbGcUgBpkxLJPfBXo" crossorigin="anonymous"></script>
+    <script src="browser.js" integrity="sha384-2C/mseOIx+CsSDzfjEOHbZ5n0aWDPGvEa16KGKnFzNdcOd91Rh68SzBcv1BYXM7Q" crossorigin="anonymous"></script>
+    <script src="crypto.js" integrity="sha384-nU97w6hqrbNsMk+T5kOtnCjCV6DA+G3cs/0nJY8Elj2czNqCTh1uYujjECfy+fDT" crossorigin="anonymous"></script>
+    <script src="marker.js" integrity="sha384-JdCjNf5r7DRPgUqx1VMnyj8Kpmbe6/x/N5/iakIuMcSJJp6bo4cYa1Pt5NdB5D9M" crossorigin="anonymous"></script>
+    <script src="redacted.js" integrity="sha384-WIjfYeQOEFcdf6d0ySsmkNWUArcBwwimHiGG38EQolQYDJGyYGKQixnFhMLshOgq" crossorigin="anonymous"></script>
+    <script src="unlock.js" integrity="sha384-HNFP/XWTun5vkGpHvxKzc7MykcpXUsWwvfrOwM5uwvTkaQUNpSDHZdNntRPfPKZu" crossorigin="anonymous"></script>
   </body>
 </html>
