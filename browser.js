@@ -48,15 +48,27 @@
         api.runtime.sendMessage(message, (response) => {
           try {
             if (api.runtime.lastError) {
+              if (isInvalidatedError(api.runtime.lastError)) {
+                resolve({ __invalidated: true });
+                return;
+              }
               resolve(null);
               return;
             }
             resolve(response ?? null);
-          } catch {
+          } catch (error) {
+            if (isInvalidatedError(error)) {
+              resolve({ __invalidated: true });
+              return;
+            }
             resolve(null);
           }
         });
-      } catch {
+      } catch (error) {
+        if (isInvalidatedError(error)) {
+          resolve({ __invalidated: true });
+          return;
+        }
         resolve(null);
       }
     });

@@ -25,12 +25,20 @@
   let remoteSelectionPreview = '';
   // Which iframe last reported the selection (top frame only)
   let remoteSelectionToken = '';
-  function orgShareMessage(type, payload = {}) {
-    return new Promise((resolve) => {
-      runtimeApi()?.sendMessage?.({ type, ...payload }, (response) => {
-        resolve(response || { ok: false });
-      });
-    });
+  async function orgShareMessage(type, payload = {}) {
+    if (!extensionReachable()) return { ok: false };
+    try {
+      const response = await browserApi()?.sendMessage?.({ type, ...payload });
+      if (response?.__invalidated) {
+        warnStaleContext();
+        return { ok: false };
+      }
+      if (response == null && !extensionReachable()) warnStaleContext();
+      return response || { ok: false };
+    } catch (error) {
+      if (isInvalidatedError(error)) warnStaleContext();
+      return { ok: false };
+    }
   }
 
   function canUseOrgSharing(settings) {
@@ -47,7 +55,8 @@
     if (orgShareSyncTimer) return;
     orgShareSyncTimer = window.setTimeout(() => {
       orgShareSyncTimer = null;
-      orgShareMessage('ORG_SYNC_SHARES').then((result) => {
+      runSafe(async () => {
+        const result = await orgShareMessage('ORG_SYNC_SHARES');
         if (result?.failed > 0) {
           safeToast('Some shared unlock keys could not be retrieved — re-register your work email in Settings.', 'error');
         }

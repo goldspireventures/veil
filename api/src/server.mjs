@@ -13,6 +13,19 @@ import {
   claimShare,
 } from './share-service.mjs';
 import { parseAuthHeaders } from './auth.mjs';
+import {
+  authenticateAdmin,
+  createOrganization,
+  getOrganization,
+  updateOrganization,
+  listJoinCodes,
+  createJoinCode,
+  setJoinCodeActive,
+  listMembersAdmin,
+  listDevices,
+  revokeDevice,
+  deactivateMember,
+} from './admin-service.mjs';
 
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = join(apiRoot, 'public');
@@ -51,7 +64,7 @@ function json(res, req, status, body) {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(payload),
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-Id, X-Policy-Version, X-Extension-Version',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   });
   writeCors(res, req);
   res.end(payload);
@@ -103,7 +116,7 @@ const server = createServer(async (req, res) => {
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204, { 'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Device-Id, X-Policy-Version, X-Extension-Version',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS' });
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS' });
     writeCors(res, req);
     res.end();
     return;
@@ -185,8 +198,95 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    // --- Organization admin (self-serve console) ---
+
+    if (req.method === 'POST' && pathname === '/v1/orgs') {
+      if (!String(req.headers['content-type'] || '').includes('application/json')) {
+        throw httpError(415, 'Content-Type must be application/json.');
+      }
+      const body = await readBody(req);
+      const result = await createOrganization(body);
+      json(res, req, 201, result);
+      return;
+    }
+
+    if (pathname.startsWith('/v1/orgs/me')) {
+      const admin = await authenticateAdmin(req);
+
+      if (req.method === 'GET' && pathname === '/v1/orgs/me') {
+        json(res, req, 200, await getOrganization(admin));
+        return;
+      }
+
+      if (req.method === 'PATCH' && pathname === '/v1/orgs/me') {
+        if (!String(req.headers['content-type'] || '').includes('application/json')) {
+          throw httpError(415, 'Content-Type must be application/json.');
+        }
+        const body = await readBody(req);
+        json(res, req, 200, await updateOrganization(admin, body));
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/orgs/me/join-codes') {
+        json(res, req, 200, await listJoinCodes(admin));
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/orgs/me/join-codes') {
+        const body = await readBody(req);
+        json(res, req, 201, await createJoinCode(admin, body));
+        return;
+      }
+
+      const joinCodeMatch = pathname.match(/^\/v1\/orgs\/me\/join-codes\/([^/]+)$/);
+      if (req.method === 'PATCH' && joinCodeMatch) {
+        const body = await readBody(req);
+        const code = decodeURIComponent(joinCodeMatch[1]);
+        json(res, req, 200, await setJoinCodeActive(admin, code, body.active !== false));
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/orgs/me/members') {
+        json(res, req, 200, await listMembersAdmin(admin));
+        return;
+      }
+
+      if (req.method === 'POST' && pathname === '/v1/orgs/me/members/deactivate') {
+        const body = await readBody(req);
+        json(res, req, 200, await deactivateMember(admin, body.email));
+        return;
+      }
+
+      if (req.method === 'GET' && pathname === '/v1/orgs/me/devices') {
+        json(res, req, 200, await listDevices(admin));
+        return;
+      }
+
+      const revokeMatch = pathname.match(/^\/v1\/orgs\/me\/devices\/([^/]+)\/revoke$/);
+      if (req.method === 'POST' && revokeMatch) {
+        const deviceId = decodeURIComponent(revokeMatch[1]);
+        json(res, req, 200, await revokeDevice(admin, deviceId));
+        return;
+      }
+    }
+
     if (req.method === 'GET' && (pathname === '/secure-text/join' || pathname.startsWith('/secure-text/join/'))) {
       if (serveStatic('join.html', res)) return;
+    }
+
+    const portalPages = {
+      '/': 'index.html',
+      '/index.html': 'index.html',
+      '/create.html': 'create.html',
+      '/admin.html': 'admin.html',
+      '/join.html': 'join.html',
+    };
+    if (req.method === 'GET' && portalPages[pathname]) {
+      if (serveStatic(portalPages[pathname], res)) return;
+    }
+
+    if (req.method === 'GET' && pathname.startsWith('/portal/')) {
+      if (serveStatic(pathname.slice(1), res)) return;
     }
 
     if (req.method === 'GET' && pathname.startsWith('/public/')) {

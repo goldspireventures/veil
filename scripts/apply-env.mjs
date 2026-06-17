@@ -1,10 +1,12 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, cpSync, mkdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const envPath = join(repoRoot, '.env');
 const constantsPath = join(repoRoot, 'extension', 'src', 'constants.js');
+const portalConfigPath = join(repoRoot, 'portal', 'config.js');
+const apiPublicDir = join(repoRoot, 'api', 'public');
 
 function parseEnv(text) {
   const out = {};
@@ -27,6 +29,15 @@ function jsString(value) {
   return JSON.stringify(value ?? '');
 }
 
+function portalOrigin(url) {
+  if (!url) return '';
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '';
+  }
+}
+
 if (!existsSync(envPath)) {
   console.error(`Missing ${envPath} — copy .env.example to .env first.`);
   process.exit(1);
@@ -34,11 +45,12 @@ if (!existsSync(envPath)) {
 
 const env = parseEnv(readFileSync(envPath, 'utf8'));
 const orgApiBase = env.ORG_API_BASE ?? '';
-const orgPortalUrl = env.ORG_PORTAL_URL ?? 'https://goldspire.studio/secure-text/join';
+const orgPortalUrl = env.ORG_PORTAL_URL ?? '';
 const unlockUrl = env.BUILT_IN_PUBLIC_UNLOCK_URL ?? 'https://goldspire-global.github.io/secure-text/unlock.html';
 const syncMinutes = Number(env.ORG_SYNC_INTERVAL_MINUTES) || 360;
+const portalOriginValue = portalOrigin(orgPortalUrl);
 
-const contents = `/**
+const constantsContents = `/**
  * Built-in defaults shipped with the extension (no user setup required).
  * Generated from repo-root .env via \`npm run env:apply\` — do not edit by hand.
  */
@@ -65,5 +77,29 @@ const contents = `/**
 })(typeof globalThis !== 'undefined' ? globalThis : self);
 `;
 
-writeFileSync(constantsPath, contents);
+const portalConfigContents = `/**
+ * Portal pages (Cloudflare Pages) — generated from .env via npm run env:apply.
+ */
+(function (global) {
+  global.GoldspirePortal = {
+    API_BASE: ${jsString(orgApiBase)},
+    PORTAL_URL: ${jsString(orgPortalUrl)},
+    PORTAL_ORIGIN: ${jsString(portalOriginValue)},
+  };
+})(typeof globalThis !== 'undefined' ? globalThis : self);
+`;
+
+writeFileSync(constantsPath, constantsContents);
+writeFileSync(portalConfigPath, portalConfigContents);
+
+mkdirSync(join(apiPublicDir, 'portal'), { recursive: true });
+for (const file of ['common.css', 'app.js', 'config.js']) {
+  cpSync(join(repoRoot, 'portal', file), join(apiPublicDir, 'portal', file), { force: true });
+}
+for (const page of ['index.html', 'create.html', 'admin.html', 'join.html']) {
+  cpSync(join(repoRoot, page), join(apiPublicDir, page), { force: true });
+}
+
 console.log(`Applied .env → ${constantsPath}`);
+console.log(`Applied .env → ${portalConfigPath}`);
+console.log(`Synced portal pages → ${apiPublicDir}`);

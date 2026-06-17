@@ -24,41 +24,34 @@ When policy includes `teamPassphrase`:
 
 Optional policy fields: `orgId`, `orgDisplayName` (banner branding).
 
-## Cloud lane (extension ready; API TBD)
+## Cloud lane (self-serve)
 
-For teams without MDM. User flow:
+For teams without MDM:
 
-1. Install extension → **Team / Organization**
-2. Enter **join code** from admin, or **Sign in with organization**
-3. Extension receives org policy + team passphrase
-4. Background sync every 6 hours (and on popup open) picks up rotations
+1. **Admin** creates org at `{ORG_PORTAL_URL}/../create.html` (or `/create.html` on portal host)
+2. **Members** install extension → Team / Organization → join code + work email
+3. Extension receives org policy + team passphrase; syncs rotations automatically
 
-### Join code API (to implement on backend)
+### Join code API
 
 ```http
 POST /v1/extension/org/join
-X-Device-Id: {uuid}
+```
+
+### Create organization API
+
+```http
+POST /v1/orgs
 Content-Type: application/json
 
-{ "joinCode": "ACME-7K2M", "deviceId": "{uuid}" }
-```
-
-Response:
-
-```json
 {
-  "orgId": "acme-corp",
-  "orgDisplayName": "Acme Corp",
+  "displayName": "Acme Corp",
   "teamPassphrase": "…",
-  "policyVersion": 3,
-  "provisionToken": "…",
-  "settings": {
-    "passphraseFromVault": false,
-    "useSavedPassphrase": true,
-    "defaultSecureMode": "team"
-  }
+  "adminEmail": "admin@acme.com"
 }
 ```
+
+Returns `joinCode`, `adminToken` (once), and `orgId`. Admin console uses `Authorization: Bearer {adminToken}`.
 
 ### Sync API
 
@@ -93,16 +86,15 @@ Configure `ORG_API_BASE` and `ORG_PORTAL_URL` in `src/constants.js` when deployi
 ## Local dev
 
 ```bash
-# From this repo root (see SETUP.md)
 npm install
 npm run env:apply
-npm run setup:cloud
+npm run db:migrate
 npm run api:dev
 ```
 
-Demo join code (after seed): **`DEMO-N0VA7`** (Nova Care org).
+Open `http://localhost:3015/create.html` to create an org, or `http://localhost:3015/join.html` to test member join.
 
-Reload the extension, pick **Team / Organization**, enter the join code or use **Sign in with organization**.
+Optional demo seed for local testing only: `npm run db:seed` (creates Nova Care + `DEMO-N0VA7`).
 
 ## External vault mode (optional)
 

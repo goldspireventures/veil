@@ -183,6 +183,8 @@
 
     const url = new URL(portal);
     url.searchParams.set('device_id', deviceId);
+    const base = apiBase();
+    if (base) url.searchParams.set('api', base);
     const extensionId = browser()?.runtime?.id;
     if (extensionId) url.searchParams.set('extension_id', extensionId);
 

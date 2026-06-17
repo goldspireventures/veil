@@ -53,7 +53,7 @@ export async function joinWithCode(joinCode, deviceId) {
 
   if (joinResult.rowCount === 0) {
     console.warn('[org/join] no match for code:', code);
-    throw httpError(404, 'Invalid or expired join code. Demo code: DEMO-N0VA7 (zero, not letter O).');
+    throw httpError(404, 'Invalid or expired join code.');
   }
 
   const org = joinResult.rows[0];

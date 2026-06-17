@@ -34,8 +34,11 @@
   "externally_connectable": {
     "matches": [
       "http://localhost:3015/*",
+      "http://localhost:8788/*",
       "https://goldspire.studio/*",
-      "https://*.goldspire.studio/*"
+      "https://*.goldspire.studio/*",
+      "https://join-secure-text.goldspireventures.com/*",
+      "https://*.goldspireventures.com/*"
     ]
   },
   "content_scripts": [

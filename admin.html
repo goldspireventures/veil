@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin console — Goldspire Secure Text</title>
+  <link rel="stylesheet" href="portal/common.css" />
+</head>
+<body>
+  <div class="layout">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="create.html">Create organization</a>
+      <a href="join.html">Join organization</a>
+      <a href="admin.html">Admin console</a>
+    </nav>
+
+    <div id="login-card" class="card">
+      <h1>Admin console</h1>
+      <p class="lede">Sign in with the admin token you received when the organization was created.</p>
+
+      <form id="login-form">
+        <div class="field">
+          <label for="admin-token">Admin token</label>
+          <input id="admin-token" name="adminToken" class="code" autocomplete="off" required placeholder="gst_…" />
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn">Sign in</button>
+        </div>
+      </form>
+      <div id="login-status" class="status" role="status"></div>
+    </div>
+
+    <div id="dashboard" class="hidden">
+      <div class="card">
+        <h1 id="org-title">Organization</h1>
+        <p class="lede" id="org-meta"></p>
+        <div class="btn-row">
+          <button type="button" class="btn btn--ghost btn--sm" id="refresh-btn">Refresh</button>
+          <button type="button" class="btn btn--ghost btn--sm" id="sign-out-btn">Sign out</button>
+        </div>
+        <div id="dash-status" class="status" role="status"></div>
+      </div>
+
+      <div class="card">
+        <h2>Organization settings</h2>
+        <form id="settings-form">
+          <div class="field">
+            <label for="settings-name">Display name</label>
+            <input id="settings-name" required minlength="2" maxlength="120" />
+          </div>
+          <div class="field">
+            <label for="settings-email">Admin contact email</label>
+            <input id="settings-email" type="email" />
+          </div>
+          <div class="field">
+            <label for="settings-passphrase">Rotate team passphrase</label>
+            <input id="settings-passphrase" type="password" minlength="12" autocomplete="new-password" placeholder="Leave blank to keep current" />
+            <div class="hint">Rotating bumps policy version — members sync automatically within a few hours (or on next popup open).</div>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn--ghost btn--sm" id="generate-rotate-passphrase">Generate</button>
+            <button type="submit" class="btn btn--sm">Save changes</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Join codes</h2>
+        <p class="lede">Share a code with members. They enter it in the extension or on the join page.</p>
+        <div class="btn-row">
+          <button type="button" class="btn btn--sm" id="new-code-btn">Create join code</button>
+        </div>
+        <div style="overflow-x: auto; margin-top: 1rem;">
+          <table>
+            <thead>
+              <tr><th>Code</th><th>Status</th><th>Created</th><th></th></tr>
+            </thead>
+            <tbody id="codes-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Members</h2>
+        <table>
+          <thead>
+            <tr><th>Email</th><th>Name</th><th>Registered</th><th>Joined</th><th></th></tr>
+          </thead>
+          <tbody id="members-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Devices</h2>
+        <table>
+          <thead>
+            <tr><th>Device</th><th>Member</th><th>Policy v</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="devices-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="portal/config.js"></script>
+  <script src="portal/app.js"></script>
+  <script>
+    const app = GoldspirePortalApp;
+    const loginCard = document.getElementById('login-card');
+    const dashboard = document.getElementById('dashboard');
+    const loginStatus = document.getElementById('login-status');
+    const dashStatus = document.getElementById('dash-status');
+
+    function showDashboard(show) {
+      loginCard.classList.toggle('hidden', show);
+      dashboard.classList.toggle('hidden', !show);
+    }
+
+    async function loadDashboard() {
+      app.setStatus(dashStatus, 'Loading…');
+      try {
+        const org = await app.apiAdmin('/v1/orgs/me');
+        const codes = await app.apiAdmin('/v1/orgs/me/join-codes');
+        const members = await app.apiAdmin('/v1/orgs/me/members');
+        const devices = await app.apiAdmin('/v1/orgs/me/devices');
+
+        document.getElementById('org-title').textContent = org.displayName;
+        document.getElementById('org-meta').textContent =
+          `ID: ${org.orgId} · Policy version ${org.policyVersion}`;
+        document.getElementById('settings-name').value = org.displayName;
+        document.getElementById('settings-email').value = org.adminEmail || '';
+
+        const codesBody = document.getElementById('codes-body');
+        codesBody.innerHTML = codes.joinCodes.map((row) => `
+          <tr>
+            <td><code>${row.code}</code></td>
+            <td><span class="badge ${row.active ? 'badge--ok' : 'badge--off'}">${row.active ? 'Active' : 'Inactive'}</span></td>
+            <td>${app.formatWhen(row.createdAt)}</td>
+            <td>
+              ${row.active
+                ? `<button type="button" class="btn btn--ghost btn--sm" data-deactivate-code="${row.code}">Deactivate</button>`
+                : ''}
+            </td>
+          </tr>
+        `).join('');
+
+        const membersBody = document.getElementById('members-body');
+        membersBody.innerHTML = members.members.length
+          ? members.members.map((row) => `
+            <tr>
+              <td>${row.email}</td>
+              <td>${row.displayName || '—'}</td>
+              <td>${row.registered ? 'Yes' : 'No'}</td>
+              <td>${app.formatWhen(row.createdAt)}</td>
+              <td>
+                ${row.active
+                  ? `<button type="button" class="btn btn--danger btn--sm" data-deactivate-member="${row.email}">Deactivate</button>`
+                  : '<span class="badge badge--off">Inactive</span>'}
+              </td>
+            </tr>
+          `).join('')
+          : '<tr><td colspan="5">No members yet.</td></tr>';
+
+        const devicesBody = document.getElementById('devices-body');
+        devicesBody.innerHTML = devices.devices.length
+          ? devices.devices.map((row) => `
+            <tr>
+              <td><code>${row.deviceId.slice(0, 8)}…</code></td>
+              <td>${row.memberEmail || '—'}</td>
+              <td>${row.policyVersion}</td>
+              <td>${row.revoked ? '<span class="badge badge--off">Revoked</span>' : '<span class="badge badge--ok">Active</span>'}</td>
+              <td>
+                ${!row.revoked
+                  ? `<button type="button" class="btn btn--danger btn--sm" data-revoke-device="${encodeURIComponent(row.deviceId)}">Revoke</button>`
+                  : ''}
+              </td>
+            </tr>
+          `).join('')
+          : '<tr><td colspan="5">No devices have joined yet.</td></tr>';
+
+        app.setStatus(dashStatus, '');
+      } catch (error) {
+        app.setStatus(dashStatus, error.message || 'Could not load dashboard.', 'error');
+        if ((error.message || '').includes('admin token')) {
+          app.clearAdminSession();
+          showDashboard(false);
+        }
+      }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const token = document.getElementById('admin-token').value.trim();
+      app.saveAdminSession({ adminToken: token });
+      try {
+        const org = await app.apiAdmin('/v1/orgs/me');
+        app.saveAdminSession({
+          adminToken: token,
+          orgId: org.orgId,
+          displayName: org.displayName,
+        });
+        showDashboard(true);
+        await loadDashboard();
+        app.setStatus(loginStatus, '');
+      } catch (error) {
+        app.clearAdminSession();
+        app.setStatus(loginStatus, error.message || 'Sign in failed.', 'error');
+      }
+    });
+
+    document.getElementById('sign-out-btn').addEventListener('click', () => {
+      app.clearAdminSession();
+      showDashboard(false);
+    });
+
+    document.getElementById('refresh-btn').addEventListener('click', () => loadDashboard());
+
+    document.getElementById('new-code-btn').addEventListener('click', async () => {
+      try {
+        const result = await app.apiAdmin('/v1/orgs/me/join-codes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}',
+        });
+        await app.copyText(result.code);
+        app.setStatus(dashStatus, `Created join code ${result.code} (copied).`, 'ok');
+        await loadDashboard();
+      } catch (error) {
+        app.setStatus(dashStatus, error.message, 'error');
+      }
+    });
+
+    document.getElementById('settings-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const body = {
+        displayName: document.getElementById('settings-name').value.trim(),
+        adminEmail: document.getElementById('settings-email').value.trim(),
+      };
+      const passphrase = document.getElementById('settings-passphrase').value;
+      if (passphrase) body.teamPassphrase = passphrase;
+
+      try {
+        await app.apiAdmin('/v1/orgs/me', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        document.getElementById('settings-passphrase').value = '';
+        app.setStatus(dashStatus, 'Settings saved.', 'ok');
+        await loadDashboard();
+      } catch (error) {
+        app.setStatus(dashStatus, error.message, 'error');
+      }
+    });
+
+    document.getElementById('generate-rotate-passphrase').addEventListener('click', () => {
+      document.getElementById('settings-passphrase').value = app.generatePassphrase(24);
+    });
+
+    dashboard.addEventListener('click', async (event) => {
+      const code = event.target?.dataset?.deactivateCode;
+      const email = event.target?.dataset?.deactivateMember;
+      const device = event.target?.dataset?.revokeDevice;
+
+      try {
+        if (code) {
+          await app.apiAdmin(`/v1/orgs/me/join-codes/${encodeURIComponent(code)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ active: false }),
+          });
+          await loadDashboard();
+        }
+        if (email) {
+          if (!confirm(`Deactivate ${email}?`)) return;
+          await app.apiAdmin('/v1/orgs/me/members/deactivate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+          await loadDashboard();
+        }
+        if (device) {
+          if (!confirm('Revoke this device? It will need to join again.')) return;
+          await app.apiAdmin(`/v1/orgs/me/devices/${device}/revoke`, { method: 'POST' });
+          await loadDashboard();
+        }
+      } catch (error) {
+        app.setStatus(dashStatus, error.message, 'error');
+      }
+    });
+
+    (async function init() {
+      const session = app.loadAdminSession();
+      if (session?.adminToken) {
+        document.getElementById('admin-token').value = session.adminToken;
+        showDashboard(true);
+        await loadDashboard();
+      }
+    })();
+  </script>
+</body>
+</html>

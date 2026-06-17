@@ -4,79 +4,44 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Join organization — Goldspire Secure Text</title>
-  <style>
-    :root {
-      color-scheme: light dark;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      line-height: 1.5;
-    }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #0f1419;
-      color: #e7ecf3;
-    }
-    main {
-      width: min(460px, calc(100vw - 2rem));
-      background: #171d26;
-      border: 1px solid #2a3444;
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
-    }
-    h1 { font-size: 1.25rem; margin: 0 0 0.5rem; }
-    p { margin: 0 0 1rem; color: #aab4c3; font-size: 0.95rem; }
-    label { display: block; font-size: 0.85rem; margin-bottom: 0.35rem; color: #c8d0dc; }
-    input {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 0.65rem 0.75rem;
-      border-radius: 8px;
-      border: 1px solid #3a4658;
-      background: #0f1419;
-      color: inherit;
-      font-size: 0.98rem;
-      letter-spacing: 0.02em;
-    }
-    input.code { text-transform: uppercase; letter-spacing: 0.04em; }
-    button {
-      margin-top: 1rem;
-      width: 100%;
-      padding: 0.7rem 1rem;
-      border: 0;
-      border-radius: 8px;
-      background: #3b82f6;
-      color: white;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    button:disabled { opacity: 0.6; cursor: wait; }
-    .status { margin-top: 1rem; min-height: 1.25rem; font-size: 0.9rem; }
-    .status.error { color: #f87171; }
-    .status.ok { color: #4ade80; }
-    .hint { margin-top: 0.5rem; font-size: 0.85rem; color: #9aa4b4; }
-  </style>
+  <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
-  <main>
-    <h1>Join your organization</h1>
-    <p>Open from the extension “Sign in with organization” button for automatic pairing.</p>
+  <div class="layout">
+    <nav class="nav">
+      <a href="index.html">Home</a>
+      <a href="create.html">Create organization</a>
+      <a href="join.html">Join organization</a>
+      <a href="admin.html">Admin console</a>
+    </nav>
 
-    <form id="join-form">
-      <label for="api-base">Organization server URL</label>
-      <input id="api-base" name="apiBase" autocomplete="off" placeholder="https://api.yourcompany.com" />
-      <div class="hint">This page calls your org API. It must allow CORS for this portal’s origin.</div>
+    <div class="card">
+      <h1>Join your organization</h1>
+      <p class="lede">Enter the join code from your admin. Open this page from the extension for automatic pairing, or enter your details manually.</p>
 
-      <label for="join-code" style="margin-top: 1rem;">Join code</label>
-      <input id="join-code" class="code" name="joinCode" autocomplete="off" placeholder="DEMO-N0VA7" required />
-      <button type="submit" id="submit-btn">Connect extension</button>
-    </form>
-    <div id="status" class="status" role="status"></div>
-  </main>
+      <form id="join-form">
+        <div class="field">
+          <label for="api-base">Organization server URL</label>
+          <input id="api-base" name="apiBase" autocomplete="off" placeholder="https://api.yourcompany.com" />
+          <div class="hint">Pre-filled from deployment config when available.</div>
+        </div>
+
+        <div class="field">
+          <label for="join-code">Join code</label>
+          <input id="join-code" class="code" name="joinCode" autocomplete="off" required placeholder="XXXX-XXXX" />
+        </div>
+
+        <button type="submit" class="btn" id="submit-btn">Connect extension</button>
+      </form>
+
+      <div id="status" class="status" role="status"></div>
+    </div>
+  </div>
+
+  <script src="portal/config.js"></script>
+  <script src="portal/app.js"></script>
   <script>
+    const app = GoldspirePortalApp;
     const params = new URLSearchParams(location.search);
     const deviceId = params.get('device_id') || '';
     const extensionId = params.get('extension_id') || '';
@@ -86,28 +51,25 @@
     const apiBaseInput = document.getElementById('api-base');
 
     const apiFromQuery = params.get('api') || params.get('api_base') || '';
-    if (apiFromQuery) apiBaseInput.value = apiFromQuery;
-
-    function setStatus(message, kind) {
-      statusEl.textContent = message;
-      statusEl.className = 'status' + (kind ? ' ' + kind : '');
-    }
-
-    function normalizeBase(value) {
-      const v = String(value || '').trim().replace(/\/+$/, '');
-      if (!v) return '';
-      try { return new URL(v).toString().replace(/\/+$/, ''); } catch { return ''; }
-    }
+    apiBaseInput.value = apiFromQuery || app.apiBase();
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const joinCode = document.getElementById('join-code').value.trim();
-      const apiBase = normalizeBase(apiBaseInput.value);
-      if (!apiBase) { setStatus('Enter a valid organization server URL.', 'error'); return; }
+      const manualBase = apiBaseInput.value.trim().replace(/\/+$/, '');
+      let apiBase = manualBase;
+      if (apiBase) {
+        try { apiBase = new URL(apiBase).toString().replace(/\/+$/, ''); } catch { apiBase = ''; }
+      }
+      if (!apiBase) apiBase = app.apiBase();
+      if (!apiBase) {
+        app.setStatus(statusEl, 'Enter a valid organization server URL.', 'error');
+        return;
+      }
       if (!joinCode) return;
 
       submitBtn.disabled = true;
-      setStatus('Joining…');
+      app.setStatus(statusEl, 'Joining…');
 
       const effectiveDeviceId = deviceId || crypto.randomUUID();
       try {
@@ -117,10 +79,7 @@
             'Content-Type': 'application/json',
             'X-Device-Id': effectiveDeviceId,
           },
-          body: JSON.stringify({
-            joinCode,
-            deviceId: effectiveDeviceId,
-          }),
+          body: JSON.stringify({ joinCode, deviceId: effectiveDeviceId }),
         });
 
         const payload = await response.json().catch(() => ({}));
@@ -128,26 +87,26 @@
           throw new Error(payload.message || payload.error || 'Join failed.');
         }
 
-        if (extensionId && typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
-          await chrome.runtime.sendMessage(extensionId, {
+        const runtime = typeof chrome !== 'undefined' ? chrome : (typeof browser !== 'undefined' ? browser : null);
+        if (extensionId && runtime?.runtime?.sendMessage) {
+          await runtime.runtime.sendMessage(extensionId, {
             type: 'ORG_PROVISION',
             payload,
           });
-          setStatus('Connected. You can close this tab and return to the extension.', 'ok');
+          app.setStatus(statusEl, 'Connected. Close this tab and finish setup in the extension (enter your work email).', 'ok');
         } else {
-          setStatus('Joined successfully. Return to the extension popup to finish setup.', 'ok');
+          app.setStatus(statusEl, `Joined ${payload.orgDisplayName || 'your organization'}. Open the extension → Team → enter the same join code and your work email.`, 'ok');
         }
       } catch (err) {
-        setStatus(err.message || 'Join failed.', 'error');
+        app.setStatus(statusEl, err.message || 'Join failed.', 'error');
       } finally {
         submitBtn.disabled = false;
       }
     });
 
     if (!deviceId) {
-      setStatus('Tip: open this portal from the extension for automatic device pairing.');
+      app.setStatus(statusEl, 'Tip: use “Sign in with organization” in the extension for automatic device pairing.', 'warn');
     }
   </script>
 </body>
 </html>
-
