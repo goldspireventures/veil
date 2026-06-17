@@ -14,8 +14,9 @@
     "setup:cloud": "npm run db:migrate && npm run db:seed",
     "api:dev": "node api/src/server.mjs",
     "dev": "npm run env:apply && npm run api:dev",
-    "test": "node --test tests/detection/*.test.mjs",
+    "test": "node --test tests/detection/*.test.mjs tests/scenarios/*.test.mjs",
     "test:detection": "node --test tests/detection/*.test.mjs",
+    "test:scenarios": "node --test tests/scenarios/*.test.mjs",
     "e2e": "node scripts/e2e-smoke.mjs"
   },
   "dependencies": {

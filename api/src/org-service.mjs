@@ -100,6 +100,15 @@ export async function joinWithCode(joinCode, deviceId, email) {
   );
 
   const provisionToken = provisionResult.rows[0].provision_token;
+
+  await pool.query(
+    `UPDATE org_members
+     SET device_id = $1, updated_at = now()
+     WHERE org_id = $2 AND email = $3 AND active = true
+       AND (device_id IS NULL OR device_id = $1)`,
+    [device, org.id, memberEmail],
+  );
+
   const teamContext = await getMemberTeamPolicy(org.id, memberEmail);
   return orgPayload(org, provisionToken, teamContext);
 }

@@ -53,7 +53,7 @@ async function main() {
   const env = loadEnv();
   const apiBase = process.env.ORG_API_BASE || env.ORG_API_BASE || 'http://localhost:3015';
 
-  console.log('=== 1/4 Unit tests ===');
+  console.log('=== 1/5 Unit + scenario tests ===');
   await run('npm', ['test']);
 
   console.log('\n=== 2/4 Package extension ===');
