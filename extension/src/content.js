@@ -25,6 +25,9 @@
   let remoteSelectionPreview = '';
   // Which iframe last reported the selection (top frame only)
   let remoteSelectionToken = '';
+  let remoteSelectionInEditable = false;
+  // Prevent double-secure from duplicate commands / editor quirks
+  let lastSecureGuard = { key: '', at: 0 };
   async function orgShareMessage(type, payload = {}) {
     if (!extensionReachable()) return { ok: false };
     try {
@@ -72,6 +75,9 @@
     if (!target) return false;
     const el = target instanceof Element ? target : target.parentElement;
     if (!el) return false;
+    if (GoldspireEditorHost?.closestEditable) {
+      return Boolean(GoldspireEditorHost.closestEditable(el));
+    }
     if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
       return !el.disabled && !el.readOnly;
     }
@@ -141,10 +147,14 @@
   }
 
   function isComposeContext() {
+    if (!isTopFrame && elementIsEditable(document.activeElement)) return true;
+
     if (elementIsEditable(lastContextMenuTarget)) return true;
 
     const active = document.activeElement;
     if (elementIsEditable(active)) return true;
+
+    if (isTopFrame && remoteSelectionInEditable) return true;
 
     // Check if selection/caret is inside a contenteditable subtree
     try {
@@ -152,11 +162,14 @@
       if (sel && sel.rangeCount > 0) {
         const ancestor = sel.getRangeAt(0).commonAncestorContainer;
         const el = ancestor.nodeType === Node.ELEMENT_NODE ? ancestor : ancestor.parentElement;
-        if (el?.closest('[contenteditable="true"],[contenteditable=""]')) return true;
+        if (el?.closest('[contenteditable="true"],[contenteditable=""],[contenteditable="plaintext-only"]')) return true;
+        if (GoldspireEditorHost?.closestEditable?.(el)) return true;
       }
     } catch { /**/ }
     return false;
   }
+
+  window.__goldspireIsComposeContext = isComposeContext;
 
   function shouldShowSelectionUi(preview, settings) {
     const summary = getSelectionSummary();
@@ -171,6 +184,11 @@
     const mode = settings?.selectionUiMode || 'smart';
     if (mode === 'quiet') return false;
     if (mode === 'always') return true;
+
+    // Relayed selection from an editor iframe (Jira, etc.)
+    if (isTopFrame && remoteSelectionPreview?.trim() && remoteSelectionInEditable) {
+      return true;
+    }
 
     // 'smart': show if in a compose context OR selection looks sensitive
     return isComposeContext() || isSensitiveSelection(preview);
@@ -363,14 +381,40 @@
 
     const range = resolved.range.cloneRange();
     const selection = resolved.selection || window.getSelection();
+    const root = GoldspireEditorHost?.findComposeRoot?.(resolved);
+    if (root) root.focus?.();
     range.deleteContents();
-    const node = document.createTextNode(replacement);
-    range.insertNode(node);
-    range.setStartAfter(node);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    node.parentElement?.closest('[contenteditable=""], [contenteditable="true"]')?.dispatchEvent(new Event('input', { bubbles: true }));
+
+    let node = null;
+    let inserted = false;
+    if (document.queryCommandSupported?.('insertText')) {
+      selection?.removeAllRanges?.();
+      selection?.addRange?.(range);
+      inserted = document.execCommand('insertText', false, replacement);
+    }
+    if (!inserted) {
+      node = document.createTextNode(replacement);
+      range.insertNode(node);
+    }
+
+    const cursorTarget = node || range.endContainer;
+    try {
+      const after = document.createRange();
+      if (node?.parentNode) {
+        after.setStartAfter(node);
+      } else {
+        after.setStart(cursorTarget, range.endOffset);
+      }
+      after.collapse(true);
+      selection?.removeAllRanges?.();
+      selection?.addRange?.(after);
+    } catch {
+      // Non-critical.
+    }
+
+    GoldspireEditorHost?.notifyEditor?.(root)
+      || node?.parentElement?.closest?.('[contenteditable=""], [contenteditable="true"]')
+        ?.dispatchEvent(new Event('input', { bubbles: true }));
     return { kind: 'node', node };
   }
 
@@ -464,8 +508,14 @@
   function broadcastSelectionToTop() {
     if (isTopFrame) return;
     const preview = GoldspireSelection.getLivePreview();
+    const inEditable = isComposeContext();
     try {
-      window.top.postMessage({ source: 'goldspire-selection-relay', preview, token: frameToken }, '*');
+      window.top.postMessage({
+        source: 'goldspire-selection-relay',
+        preview,
+        token: frameToken,
+        inEditable,
+      }, '*');
     } catch {
       // Cross-origin parent — ignore.
     }
@@ -487,6 +537,97 @@
 
   function createPromptRequestId() {
     return `gst-prompt-${Math.random().toString(36).slice(2)}-${Date.now()}`;
+  }
+
+  function shouldSkipDuplicateSecure(context) {
+    const key = [
+      context?.selectedText || '',
+      context?.kind || '',
+      context?.start ?? '',
+      context?.end ?? '',
+    ].join('|');
+    const now = Date.now();
+    if (lastSecureGuard.key === key && now - lastSecureGuard.at < 1200) return true;
+    lastSecureGuard = { key, at: now };
+    return false;
+  }
+
+  function delegatePromptToTop(prompt) {
+    const requestId = createPromptRequestId();
+    return new Promise((resolve, reject) => {
+      const onResult = (event) => {
+        if (event.data?.source !== 'goldspire-prompt-result' || event.data.requestId !== requestId) return;
+        window.removeEventListener('message', onResult);
+        if (event.data.cancelled) {
+          reject(new Error('Cancelled'));
+          return;
+        }
+        if (event.data.error) {
+          reject(new Error(event.data.error));
+          return;
+        }
+        resolve(event.data.data);
+      };
+
+      window.addEventListener('message', onResult);
+      try {
+        window.top.postMessage(
+          {
+            source: 'goldspire-prompt-request',
+            requestId,
+            kind: prompt.kind || 'generic-prompt',
+            prompt,
+          },
+          '*',
+        );
+      } catch {
+        window.removeEventListener('message', onResult);
+        reject(new Error('Could not open dialog.'));
+      }
+    });
+  }
+
+  function showPromptTop(options) {
+    if (isTopFrame) {
+      return new Promise((resolve, reject) => {
+        GoldspireSecureUI.showPrompt({
+          ...options,
+          onSubmit: async (data) => {
+            const result = await options.onSubmit(data);
+            resolve(result);
+          },
+          onCancel: () => {
+            options.onCancel?.();
+            reject(new Error('Cancelled'));
+          },
+        });
+      });
+    }
+
+    return delegatePromptToTop({
+      kind: 'generic-prompt',
+      title: options.title,
+      submitLabel: options.submitLabel,
+      compactDialog: options.compactDialog,
+      fields: options.fields,
+    }).then((data) => options.onSubmit(data));
+  }
+
+  function showResultDialogTop(options) {
+    if (isTopFrame) {
+      GoldspireSecureUI.showResultDialog(options);
+      return;
+    }
+    delegatePromptToTop({
+      kind: 'result-dialog',
+      title: options.title,
+      lines: options.lines,
+      copyItems: options.copyItems,
+      extraActions: (options.extraActions || []).map((action) => ({
+        id: action.id,
+        label: action.label,
+      })),
+    }).catch(() => {});
   }
 
   function runTeamPassphrasePrompt({ title, submitLabel, onSubmit, onCancel }) {
@@ -543,8 +684,7 @@
             source: 'goldspire-prompt-request',
             requestId,
             kind: 'team-passphrase',
-            title: options.title,
-            submitLabel: options.submitLabel,
+            prompt: { title: options.title, submitLabel: options.submitLabel },
           },
           '*',
         );
@@ -563,7 +703,7 @@
     let relayTimer = null;
     const scheduleRelay = () => {
       window.clearTimeout(relayTimer);
-      relayTimer = window.setTimeout(broadcastSelectionToTop, 400);
+      relayTimer = window.setTimeout(broadcastSelectionToTop, 120);
     };
     document.addEventListener('selectionchange', scheduleRelay);
     document.addEventListener('mouseup', () => window.setTimeout(broadcastSelectionToTop, 0));
@@ -611,17 +751,29 @@
     pill.querySelector('.gst-pill-half--quick')?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!getActivePreview()) return;
+      if (isTopFrame && remoteSelectionToken && !GoldspireSelection.getLivePreview()?.trim()) {
+        forwardToRelayedFrame('SECURE_SELECTION', {});
+        return;
+      }
       runSafe(handleCommand({ type: 'SECURE_SELECTION' }));
     });
 
     pill.querySelector('.gst-pill-half--options')?.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!getActivePreview()) return;
+      if (isTopFrame && remoteSelectionToken && !GoldspireSelection.getLivePreview()?.trim()) {
+        forwardToRelayedFrame('SECURE_WITH_OPTIONS', { showOptions: true });
+        return;
+      }
       runSafe(handleCommand({ type: 'SECURE_WITH_OPTIONS', showOptions: true }));
     });
 
     pill.querySelector('.gst-pill-unlock')?.addEventListener('click', (e) => {
       e.stopPropagation();
+      if (isTopFrame && remoteSelectionToken && !GoldspireSelection.getLivePreview()?.trim()) {
+        forwardToRelayedFrame('UNLOCK_SELECTION', {});
+        return;
+      }
       runSafe(handleCommand({ type: 'UNLOCK_SELECTION' }));
     });
 
@@ -742,6 +894,8 @@
   }
 
   async function executeSecureBatch(context, settings, options = {}) {
+    if (shouldSkipDuplicateSecure(context)) return null;
+
     const targets = sortTargetsForReplacement(validateSecureTargets(context));
     const multi = targets.length > 1;
     const results = [];
@@ -854,12 +1008,31 @@
       }
     }
 
+    if (!isOneTime) {
+      const teamPassphrase = await resolveTeamPassphrase(settings);
+      if (teamPassphrase) {
+        try {
+          return await runUnlock(teamPassphrase);
+        } catch {
+          // Wrong passphrase or rotated — show prompt below.
+        }
+      }
+    }
+
     const prefill =
       !settings.passphraseFromVault
       && !isOneTime
       && settings.useSavedPassphrase !== false
         ? settings.passphrase?.trim() || (await GoldspireSecrets.loadPassphrase?.(profile)) || ''
         : '';
+
+    if (!isOneTime && prefill && settings.useSavedPassphrase !== false && !settings.passphraseFromVault) {
+      try {
+        return await runUnlock(prefill);
+      } catch {
+        // Fall through to prompt.
+      }
+    }
 
     const unlockFields = isOneTime
       ? [
@@ -904,7 +1077,7 @@
         return;
       }
 
-      GoldspireSecureUI.showPrompt({
+      showPromptTop({
         title: 'Unlock',
         submitLabel: 'Unlock',
         fields: unlockFields,
@@ -914,13 +1087,92 @@
     });
   }
 
+  async function deliverDirectShare(context, settings, recipientEmails) {
+    const targets = sortTargetsForReplacement(validateSecureTargets(context));
+    const securedList = [];
+
+    for (const target of targets) {
+      const unlockSecret = GoldspireSecureCrypto.generateOneTimeCode(16);
+      securedList.push(
+        await executeSecure(target, settings, {
+          mode: 'one-time',
+          unlockSecret,
+          copyLink: false,
+          silentOneTime: true,
+          skipClipboard: true,
+        }),
+      );
+    }
+    const deliveredLines = [];
+
+    for (const secured of securedList) {
+      const delivered = await orgShareMessage('ORG_DELIVER_SHARE', {
+        recipientEmails,
+        unlockSecret: secured.unlockSecret,
+        fullMarker: secured.fullMarker,
+      });
+
+      if (delivered?.error) throw new Error(delivered.error);
+
+      for (const entry of delivered.shares || recipientEmails) {
+        deliveredLines.push({
+          label: 'Sent to',
+          value: entry.recipientEmail || entry,
+        });
+      }
+    }
+
+    showResultDialogTop({
+      title: securedList.length > 1
+        ? `Secured and sent to ${recipientEmails.length} ${recipientEmails.length === 1 ? 'person' : 'people'}`
+        : 'Secured and sent',
+      lines: deliveredLines,
+    });
+  }
+
+  async function showOrgSharePrompt(context, settings) {
+    try {
+      await showPromptTop({
+        title: 'Share with teammate',
+        submitLabel: 'Secure & send',
+        compactDialog: true,
+        fields: [
+          {
+            name: 'recipients',
+            label: 'Work email',
+            type: 'email',
+            placeholder: 'colleague@company.com',
+            required: true,
+            autocomplete: 'email',
+          },
+        ],
+        onSubmit: async ({ recipients }) => {
+          const recipientEmails = String(recipients || '')
+            .split(/[,;\s]+/)
+            .map((entry) => entry.trim().toLowerCase())
+            .filter(Boolean);
+          if (recipientEmails.length === 0) {
+            throw new Error('Enter a work email address.');
+          }
+          await deliverDirectShare(context, settings, recipientEmails);
+        },
+      });
+    } catch (error) {
+      if (error?.message !== 'Cancelled') {
+        GoldspireSecureUI.showToast(error instanceof Error ? error.message : 'Could not share.', 'error');
+      }
+    }
+  }
+
   async function secureSelection(message = {}) {
     if (!ensureExtensionReady()) return;
 
     const context = getSelectionContext(message);
     if (!context?.selectedText?.trim()) {
-      GoldspireSecureUI.showToast('Highlight text first, then Ctrl+Shift+S or right-click.', 'error');
-      return;
+      if (!message.silent) {
+        GoldspireSecureUI.showToast('Highlight text first, then Ctrl+Shift+S or right-click.', 'error');
+      }
+      return { handled: false };
     }
 
     try {
@@ -947,7 +1199,7 @@
         unlockSecret: teamPassphrase,
         copyLink: false,
       });
-      return;
+      return { handled: true };
     }
 
     const useVaultTeamFlow =
@@ -971,6 +1223,12 @@
     }
 
     const sharingAvailable = canUseOrgSharing(settings);
+
+    if (message.showOptions && sharingAvailable && profile === 'organization') {
+      await showOrgSharePrompt(context, settings);
+      return;
+    }
+
     const selectionSummary = getSelectionSummary();
     const protectionOptions = [
       { value: 'team', label: 'Team passphrase', checked: settings.defaultSecureMode === 'team' },
@@ -981,7 +1239,7 @@
       { value: 'custom', label: 'Custom passphrase', checked: settings.defaultSecureMode === 'custom' },
     ];
 
-    GoldspireSecureUI.showPrompt({
+    showPromptTop({
       title: selectionSummary?.multi ? `Secure ${selectionSummary.count} selections` : 'Secure selection',
       submitLabel: 'Secure as [redacted]',
       fields: [
@@ -1036,43 +1294,7 @@
             throw new Error('Enter at least one colleague work email.');
           }
 
-          const securedResults = await executeSecureBatch(context, settings, {
-            mode: 'one-time',
-            unlockSecret,
-            copyLink: false,
-            silentOneTime: true,
-            skipClipboard: true,
-          });
-
-          const securedList = Array.isArray(securedResults) ? securedResults : [securedResults];
-          const deliveredLines = [];
-
-          for (const secured of securedList) {
-            const delivered = await orgShareMessage('ORG_DELIVER_SHARE', {
-              recipientEmails,
-              unlockSecret: secured.unlockSecret,
-              fullMarker: secured.fullMarker,
-            });
-
-            if (delivered?.error) throw new Error(delivered.error);
-
-            for (const entry of delivered.shares || recipientEmails) {
-              deliveredLines.push({
-                label: 'Delivered to',
-                value: entry.recipientEmail || entry,
-              });
-            }
-          }
-
-          GoldspireSecureUI.showResultDialog({
-            title: securedList.length > 1
-              ? `Secured ${securedList.length} selections for specific people`
-              : 'Secured for specific people',
-            lines: [
-              { label: 'Note', value: 'Unlock key delivered to org inbox — not copied to clipboard.' },
-              ...deliveredLines,
-            ],
-          });
+          await deliverDirectShare(context, settings, recipientEmails);
           return;
         }
 
@@ -1241,6 +1463,7 @@
       await handler();
       return {
         ok: true,
+        handled: true,
         preview: GoldspireSelection.getLivePreview(),
         inEditable: isComposeContext(),
       };
@@ -1265,14 +1488,17 @@
     if (event.data?.source === 'goldspire-selection-relay' && isTopFrame) {
       remoteSelectionPreview = event.data.preview || '';
       remoteSelectionToken = event.data.token || '';
+      remoteSelectionInEditable = Boolean(event.data.inEditable);
       refreshSelectionUi();
       return;
     }
 
     if (event.data?.source === 'goldspire-prompt-request' && isTopFrame) {
-      const { requestId, kind, title, submitLabel } = event.data;
+      const { requestId, kind, prompt, title, submitLabel } = event.data;
       const replyTarget = event.source;
-      if (!replyTarget || kind !== 'team-passphrase') return;
+      if (!replyTarget) return;
+
+      const resolvedPrompt = prompt || { title, submitLabel };
 
       const reply = (payload) => {
         try {
@@ -1282,9 +1508,31 @@
         }
       };
 
-      GoldspireSecureUI.showTeamPassphrasePrompt({
-        title,
-        submitLabel,
+      if (kind === 'team-passphrase') {
+        GoldspireSecureUI.showTeamPassphrasePrompt({
+          title: resolvedPrompt.title,
+          submitLabel: resolvedPrompt.submitLabel,
+          onSubmit: async (data) => reply({ data }),
+          onCancel: () => reply({ cancelled: true }),
+        });
+        return;
+      }
+
+      if (kind === 'result-dialog') {
+        GoldspireSecureUI.showResultDialog({
+          title: resolvedPrompt.title,
+          lines: resolvedPrompt.lines,
+          copyItems: resolvedPrompt.copyItems,
+        });
+        reply({ data: true });
+        return;
+      }
+
+      GoldspireSecureUI.showPrompt({
+        title: resolvedPrompt.title,
+        submitLabel: resolvedPrompt.submitLabel,
+        compactDialog: resolvedPrompt.compactDialog,
+        fields: resolvedPrompt.fields,
         onSubmit: async (data) => reply({ data }),
         onCancel: () => reply({ cancelled: true }),
       });

@@ -5,8 +5,7 @@
     if (parent.closest('script,style,textarea,input,option,noscript,code,#goldspire-secure-text-prompt')) {
       return true;
     }
-    if (parent.closest('a.gst-redacted')) return true;
-    if (parent.isContentEditable) return true;
+    if (parent.closest('a.gst-redacted, button.gst-redacted-btn')) return true;
     return false;
   }
 
@@ -54,22 +53,51 @@
     node.parentNode?.replaceChild(fragment, node);
   }
 
-  function scanDocument(onUnlock) {
-    document.querySelectorAll('a.gst-redacted').forEach((link) => {
+  function collectRoots() {
+    const roots = [document];
+    const stack = [document.documentElement];
+    while (stack.length) {
+      const el = stack.pop();
+      if (!el) continue;
+      if (el.shadowRoot) {
+        roots.push(el.shadowRoot);
+        stack.push(...el.shadowRoot.querySelectorAll('*'));
+      }
+      if (el.children) {
+        for (const child of el.children) stack.push(child);
+      }
+    }
+    return roots;
+  }
+
+  function scanRoot(root, onUnlock) {
+    const scope = root === document ? document : root;
+    const query = (selector) => {
+      try {
+        return Array.from(scope.querySelectorAll?.(selector) || []);
+      } catch {
+        return [];
+      }
+    };
+
+    query('a.gst-redacted').forEach((link) => {
       const text = (link.textContent || '').trim();
       if (text !== GoldspireRedacted.LABEL && !text.includes(GoldspireRedacted.LABEL)) return;
       const marker = GoldspireRedacted.markerFromHref(link.href) || GoldspireRedacted.markerFromElement(link);
       if (marker) wireLink(link, marker, onUnlock);
     });
 
-    document.querySelectorAll(`a:not([data-gst-wired])`).forEach((link) => {
+    query('a:not([data-gst-wired])').forEach((link) => {
       const text = (link.textContent || '').trim();
       if (text !== GoldspireRedacted.LABEL) return;
       const marker = GoldspireRedacted.markerFromHref(link.href);
       if (marker) wireLink(link, marker, onUnlock);
     });
 
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+    const treeRoot = root === document ? document.body : root;
+    if (!treeRoot) return;
+
+    const walker = document.createTreeWalker(treeRoot, NodeFilter.SHOW_TEXT, {
       acceptNode(node) {
         const value = node.nodeValue || '';
         if (!value.includes(GoldspireRedacted.LABEL)) return NodeFilter.FILTER_REJECT;
@@ -84,6 +112,12 @@
     for (const node of nodes) {
       const index = node.nodeValue.indexOf(GoldspireRedacted.LABEL);
       if (index >= 0) decoratePlainTextNode(node, index, onUnlock);
+    }
+  }
+
+  function scanDocument(onUnlock) {
+    for (const root of collectRoots()) {
+      scanRoot(root, onUnlock);
     }
   }
 

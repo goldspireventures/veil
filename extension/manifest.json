@@ -52,6 +52,7 @@
         "src/browser.js",
         "src/crypto.js",
         "src/marker.js",
+        "src/editor-host.js",
         "src/redacted.js",
         "src/password.js",
         "src/selection.js",

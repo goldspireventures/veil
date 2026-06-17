@@ -133,13 +133,7 @@
   }
 
   function findComposeRoot(context) {
-    if (context?.editableRoot?.isConnected) return context.editableRoot;
-    return (
-      document.querySelector('div[contenteditable="true"][role="textbox"]')
-      || document.querySelector('div[contenteditable="true"][g_editable="true"]')
-      || document.querySelector('div.Am.Al.editable[contenteditable="true"]')
-      || document.querySelector('[contenteditable="true"]')
-    );
+    return global.GoldspireEditorHost?.findComposeRoot?.(context) || null;
   }
 
   function notifyRichEditor(root) {
@@ -318,8 +312,32 @@
   }
 
   function isEmailCompose() {
-    const host = location.hostname;
-    return /mail\.google|outlook\.(live|office)|hotmail|yahoo/.test(host);
+    return global.GoldspireEditorHost?.isEmailHost?.() || false;
+  }
+
+  function prefersPlainRedacted(context) {
+    if (global.GoldspireEditorHost?.prefersPlainInsertion) {
+      if (isEmailCompose() && isRichEmailContext(context)) return false;
+      return global.GoldspireEditorHost.prefersPlainInsertion(context);
+    }
+    if (context?.kind === 'input') return true;
+    return !isEmailCompose();
+  }
+
+  async function insertPlainRedacted(resolved, fullMarker) {
+    const plain = formatPlain(fullMarker);
+    const host = global.GoldspireEditorHost;
+    const result = host?.insertPlainAtRangeWithFallbacks
+      ? await host.insertPlainAtRangeWithFallbacks(resolved, plain)
+      : { node: null };
+
+    return {
+      kind: 'plain',
+      node: result.node,
+      fullMarker,
+      plainToken: plain,
+      display: LABEL,
+    };
   }
 
   function isRichEmailContext(context) {
@@ -375,6 +393,10 @@
       return insertRichRedacted(resolved, fullMarker, settings);
     }
 
+    if (prefersPlainRedacted(resolved)) {
+      return insertPlainRedacted(resolved, fullMarker);
+    }
+
     const unlockBaseUrl = getUnlockBaseUrl(settings);
     const range = resolved.range.cloneRange();
     const selection = resolved.selection || window.getSelection();
@@ -413,6 +435,7 @@
     isRedactedToken,
     isEmailCompose,
     isRichEmailContext,
+    prefersPlainRedacted,
     resolveSelection,
     insertRedacted,
     markerToAttr,

@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'crypto.js', 'marker.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'org-share.js');
+importScripts('constants.js', 'browser.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'org-share.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -14,6 +14,7 @@ const CONTENT_FILES = [
   'src/browser.js',
   'src/crypto.js',
   'src/marker.js',
+  'src/editor-host.js',
   'src/redacted.js',
   'src/password.js',
   'src/selection.js',
@@ -166,6 +167,35 @@ async function ensureContentScript(tabId) {
   }
 }
 
+async function resolveTargetFrame(tabId) {
+  try {
+    const results = await api.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      func: () => {
+        try {
+          const preview = window.GoldspireSelection?.getLivePreview?.() || '';
+          const inEditable = typeof window.__goldspireIsComposeContext === 'function'
+            ? window.__goldspireIsComposeContext()
+            : false;
+          return { preview: preview.trim(), inEditable };
+        } catch {
+          return { preview: '', inEditable: false };
+        }
+      },
+    });
+
+    let fallback = null;
+    for (const entry of results || []) {
+      if (!entry.result?.preview) continue;
+      if (entry.result.inEditable) return entry.frameId;
+      if (fallback == null) fallback = entry.frameId;
+    }
+    return fallback;
+  } catch {
+    return null;
+  }
+}
+
 async function dispatchToTab(tabId, frameId, message, retried = false) {
   const deliver = (targetFrameId) =>
     new Promise((resolve) => {
@@ -192,15 +222,16 @@ async function dispatchToTab(tabId, frameId, message, retried = false) {
       target: { tabId, allFrames: true },
       func: (payload) => {
         if (typeof window.__goldspireHandleCommand === 'function') {
-          return window.__goldspireHandleCommand(payload);
+          return window.__goldspireHandleCommand({ ...payload, silent: true });
         }
-        window.postMessage({ ...payload, source: 'goldspire-secure-text-extension' }, '*');
+        window.postMessage({ ...payload, source: 'goldspire-secure-text-extension', silent: true }, '*');
         return { ok: true, relayed: true };
       },
       args: [message],
     });
 
     for (const result of results || []) {
+      if (result?.result?.handled) return result.result;
       if (result?.result?.preview || result?.result?.ok) return result.result;
     }
   } catch {
@@ -217,7 +248,8 @@ function sendToActiveTab(type, payload = {}, frameId = null) {
   api.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     const tab = tabs[0];
     if (!tab?.id) return;
-    await dispatchToTab(tab.id, frameId, { type, ...payload });
+    const targetFrame = frameId ?? await resolveTargetFrame(tab.id);
+    await dispatchToTab(tab.id, targetFrame, { type, ...payload });
   });
 }
 

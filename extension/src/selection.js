@@ -6,6 +6,16 @@
   const CACHE_TTL_MS = 60_000;
   let cached = null;
 
+  function editableRootForRange(range) {
+    const node = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+      ? range.commonAncestorContainer
+      : range.commonAncestorContainer.parentElement;
+    if (global.GoldspireEditorHost?.closestEditable) {
+      return global.GoldspireEditorHost.closestEditable(node);
+    }
+    return node?.closest?.('[contenteditable=""], [contenteditable="true"]') || null;
+  }
+
   function isEditableElement(element) {
     if (!element) return false;
     if (element instanceof HTMLInputElement) {
@@ -15,7 +25,9 @@
       return !element.readOnly && !element.disabled;
     }
     if (element.isContentEditable) return true;
-    return element.getAttribute?.('contenteditable') === 'true';
+    if (element.getAttribute?.('role') === 'textbox') return true;
+    if (element.getAttribute?.('contenteditable') != null) return true;
+    return false;
   }
 
   function readInputSelection(element) {
@@ -30,14 +42,6 @@
       start,
       end,
     };
-  }
-
-  function editableRootForRange(range) {
-    const ancestor =
-      range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-        ? range.commonAncestorContainer
-        : range.commonAncestorContainer.parentElement;
-    return ancestor?.closest?.('[contenteditable=""], [contenteditable="true"]') || null;
   }
 
   function readRangeSelection() {
@@ -324,17 +328,24 @@
     getSelectionSummary,
     expandSecureTargets(context) {
       if (!context) return [];
+      let targets;
       if (context.kind === 'multi-range') {
         if (!Array.isArray(context.ranges) || context.ranges.length === 0) return [];
-        return context.ranges.map((entry) => ({
+        targets = context.ranges.map((entry) => ({
           kind: 'range',
           range: entry.range,
           selectedText: entry.selectedText,
           selection: context.selection,
           editableRoot: context.editableRoot,
         }));
+      } else {
+        targets = [context];
       }
-      return [context];
+
+      if (targets.length <= 1) return targets;
+      const sameText = targets.every((entry) => entry.selectedText === targets[0].selectedText);
+      if (sameText) return [targets[0]];
+      return targets;
     },
     getCachedPreview() {
       const stored = cached?.context;
