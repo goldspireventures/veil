@@ -340,7 +340,7 @@ api.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message?.type === 'ORG_JOIN') {
-    GoldspireOrgProvision.joinWithCode(message.joinCode)
+    GoldspireOrgProvision.joinWithCode(message.joinCode, message.email)
       .then((result) => sendResponse(result))
       .catch((error) => sendResponse({ ok: false, error: error?.message || 'Join failed.' }));
     return true;

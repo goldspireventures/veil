@@ -139,7 +139,7 @@ const server = createServer(async (req, res) => {
       }
       const body = await readBody(req);
       const deviceId = req.headers['x-device-id'] || body.deviceId;
-      const payload = await joinWithCode(body.joinCode, deviceId);
+      const payload = await joinWithCode(body.joinCode, deviceId, body.email);
       json(res, req, 200, payload);
       return;
     }

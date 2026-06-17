@@ -393,27 +393,64 @@ document.getElementById('setup-finish-personal')?.addEventListener('click', asyn
 
 document.getElementById('setup-org-connect')?.addEventListener('click', async () => {
   const joinCode = document.getElementById('setup-org-join-code')?.value.trim() || '';
-  const email = document.getElementById('setup-org-email')?.value.trim() || '';
+  const email = document.getElementById('setup-org-email')?.value.trim().toLowerCase() || '';
   if (!email) {
     showStatus('Enter your work email for secure sharing.');
     return;
   }
-
-  const result = await orgMessage('ORG_JOIN', { joinCode });
-  if (!result?.ok) {
-    showStatus(result?.error || 'Could not join organization.');
+  if (!joinCode && !document.getElementById('setup-org-join-code')?.hidden) {
+    showStatus('Enter your organization join code.');
     return;
+  }
+
+  try {
+    await completeOrgMembership({ joinCode, email });
+  } catch (error) {
+    showStatus(error?.message || 'Could not join organization.');
+  }
+});
+
+async function completeOrgMembership({ joinCode, email }) {
+  const settings = await readSyncSettings();
+  const needsJoin = Boolean(joinCode) && !settings.orgId;
+
+  if (needsJoin) {
+    const result = await orgMessage('ORG_JOIN', { joinCode, email });
+    if (!result?.ok) {
+      throw new Error(result?.error || 'Could not join organization.');
+    }
+  } else if (!settings.orgId) {
+    throw new Error('Enter your organization join code.');
   }
 
   const registered = await orgMessage('ORG_REGISTER_MEMBER', { email });
   if (registered?.error) {
-    showStatus(registered.error);
-    return;
+    await orgMessage('ORG_DISCONNECT');
+    throw new Error(registered.error);
   }
 
-  await finishSetup('organization', { orgMemberEmail: email.toLowerCase() });
-  showStatus(`Joined ${result.orgDisplayName || 'your organization'}.`);
-});
+  const joined = await readSyncSettings();
+  await finishSetup('organization', { orgMemberEmail: email });
+  showStatus(`Joined ${joined.orgDisplayName || 'your organization'}.`);
+}
+
+function showPendingOrgSetup(settings = {}) {
+  showSetup();
+  document.getElementById('setup-step-pick').hidden = true;
+  document.getElementById('setup-step-organization').hidden = false;
+  document.getElementById('setup-org-join-code').closest('.field').hidden = true;
+  document.getElementById('setup-org-connect').textContent = 'Complete setup';
+  const emailEl = document.getElementById('setup-org-email');
+  if (emailEl && settings.orgMemberEmail) emailEl.value = settings.orgMemberEmail;
+  const title = document.querySelector('#setup-step-organization .setup-step__title');
+  if (title) title.textContent = 'Confirm your work email';
+  const blurb = document.querySelector('#setup-step-organization .card__text');
+  if (blurb) {
+    blurb.textContent = settings.orgDisplayName
+      ? `Connected to ${settings.orgDisplayName}. Enter your work email to finish joining.`
+      : 'Enter your work email to finish joining your organization.';
+  }
+}
 
 document.getElementById('setup-org-signin')?.addEventListener('click', async () => {
   const result = await orgMessage('ORG_SIGN_IN');
@@ -516,6 +553,10 @@ async function loadSettings() {
   }
 
   if (!settings.setupComplete) {
+    if (settings.orgId && settings.orgProvisionSource === 'cloud') {
+      showPendingOrgSetup(settings);
+      return;
+    }
     showSetup();
     return;
   }
@@ -703,58 +744,135 @@ function generateLocalPassword(options = {}) {
   return out.join('');
 }
 
-function getPasswordOptionsFromUi() {
+function passwordUiRoot() {
+  if (currentProfile === 'personal') {
+    return {
+      output: document.getElementById('generated-password-personal'),
+      length: document.getElementById('passwordLength-personal'),
+      lowercase: document.getElementById('passwordLowercase-personal'),
+      uppercase: document.getElementById('passwordUppercase-personal'),
+      digits: document.getElementById('passwordDigits-personal'),
+      symbols: document.getElementById('passwordSymbols-personal'),
+    };
+  }
   return {
-    length: parseInt(String(passwordLengthInput?.value || 16), 10) || 16,
-    lowercase: passwordLowercaseInput?.checked !== false,
-    uppercase: passwordUppercaseInput?.checked !== false,
-    digits: passwordDigitsInput?.checked !== false,
-    symbols: passwordSymbolsInput?.checked !== false,
+    output: generatedPassword,
+    length: passwordLengthInput,
+    lowercase: passwordLowercaseInput,
+    uppercase: passwordUppercaseInput,
+    digits: passwordDigitsInput,
+    symbols: passwordSymbolsInput,
   };
+}
+
+function getPasswordOptionsFromUi() {
+  const ui = passwordUiRoot();
+  return {
+    length: parseInt(String(ui.length?.value || 16), 10) || 16,
+    lowercase: ui.lowercase?.checked !== false,
+    uppercase: ui.uppercase?.checked !== false,
+    digits: ui.digits?.checked !== false,
+    symbols: ui.symbols?.checked !== false,
+  };
+}
+
+function writeGeneratedPassword(value) {
+  const ui = passwordUiRoot();
+  if (ui.output) ui.output.textContent = value;
 }
 
 document.getElementById('generate-password')?.addEventListener('click', () => {
   try {
-    generatedPassword.textContent = generateLocalPassword(getPasswordOptionsFromUi());
+    writeGeneratedPassword(generateLocalPassword(getPasswordOptionsFromUi()));
   } catch (e) {
     showStatus(e?.message || 'Could not generate password.');
   }
 });
 
+document.getElementById('settings-form')?.addEventListener('click', (event) => {
+  const target = event.target;
+  if (target.closest('.js-generate-password')) {
+    try {
+      writeGeneratedPassword(generateLocalPassword(getPasswordOptionsFromUi()));
+    } catch (e) {
+      showStatus(e?.message || 'Could not generate password.');
+    }
+    return;
+  }
+  if (target.closest('.js-copy-password')) {
+    const ui = passwordUiRoot();
+    let value = ui.output?.textContent || '—';
+    if (value === '—') value = generateLocalPassword(getPasswordOptionsFromUi());
+    writeGeneratedPassword(value);
+    navigator.clipboard.writeText(value).then(() => showStatus('Copied.'));
+    return;
+  }
+  if (target.closest('.js-insert-password')) {
+    const ui = passwordUiRoot();
+    let value = ui.output?.textContent || '—';
+    if (value === '—') value = generateLocalPassword(getPasswordOptionsFromUi());
+    writeGeneratedPassword(value);
+    sendToActiveTab('INSERT_TEXT', { text: value });
+    showStatus('Inserted.');
+  }
+});
+
 document.getElementById('copy-password')?.addEventListener('click', async () => {
-  let value = generatedPassword.textContent;
+  const ui = passwordUiRoot();
+  let value = ui.output?.textContent || '—';
   if (value === '—') value = generateLocalPassword(getPasswordOptionsFromUi());
-  generatedPassword.textContent = value;
+  writeGeneratedPassword(value);
   await navigator.clipboard.writeText(value);
   showStatus('Copied.');
 });
 
 document.getElementById('insert-password')?.addEventListener('click', () => {
-  let value = generatedPassword.textContent;
+  const ui = passwordUiRoot();
+  let value = ui.output?.textContent || '—';
   if (value === '—') value = generateLocalPassword(getPasswordOptionsFromUi());
-  generatedPassword.textContent = value;
+  writeGeneratedPassword(value);
   sendToActiveTab('INSERT_TEXT', { text: value });
   showStatus('Inserted.');
 });
 
 function wirePasswordGeneratorSettings(settings) {
-  if (passwordLengthInput) passwordLengthInput.value = String(settings.passwordLength || 16);
-  if (passwordLowercaseInput) passwordLowercaseInput.checked = settings.passwordLowercase !== false;
-  if (passwordUppercaseInput) passwordUppercaseInput.checked = settings.passwordUppercase !== false;
-  if (passwordDigitsInput) passwordDigitsInput.checked = settings.passwordDigits !== false;
-  if (passwordSymbolsInput) passwordSymbolsInput.checked = settings.passwordSymbols !== false;
+  const panels = [
+    {
+      length: passwordLengthInput,
+      lowercase: passwordLowercaseInput,
+      uppercase: passwordUppercaseInput,
+      digits: passwordDigitsInput,
+      symbols: passwordSymbolsInput,
+    },
+    {
+      length: document.getElementById('passwordLength-personal'),
+      lowercase: document.getElementById('passwordLowercase-personal'),
+      uppercase: document.getElementById('passwordUppercase-personal'),
+      digits: document.getElementById('passwordDigits-personal'),
+      symbols: document.getElementById('passwordSymbols-personal'),
+    },
+  ];
+  for (const ui of panels) {
+    if (!ui.length) continue;
+    ui.length.value = String(settings.passwordLength || 16);
+    if (ui.lowercase) ui.lowercase.checked = settings.passwordLowercase !== false;
+    if (ui.uppercase) ui.uppercase.checked = settings.passwordUppercase !== false;
+    if (ui.digits) ui.digits.checked = settings.passwordDigits !== false;
+    if (ui.symbols) ui.symbols.checked = settings.passwordSymbols !== false;
+  }
 }
 
 async function persistPasswordGeneratorSettings() {
   try {
+    const ui = passwordUiRoot();
     const current = await readSyncSettings();
     await writeSyncSettings({
       ...current,
-      passwordLength: parseInt(String(passwordLengthInput?.value || 16), 10) || 16,
-      passwordLowercase: passwordLowercaseInput?.checked !== false,
-      passwordUppercase: passwordUppercaseInput?.checked !== false,
-      passwordDigits: passwordDigitsInput?.checked !== false,
-      passwordSymbols: passwordSymbolsInput?.checked !== false,
+      passwordLength: parseInt(String(ui.length?.value || 16), 10) || 16,
+      passwordLowercase: ui.lowercase?.checked !== false,
+      passwordUppercase: ui.uppercase?.checked !== false,
+      passwordDigits: ui.digits?.checked !== false,
+      passwordSymbols: ui.symbols?.checked !== false,
     });
   } catch {
     // ignore

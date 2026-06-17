@@ -95,7 +95,7 @@
 
     const patch = {
       securityProfile: 'organization',
-      setupComplete: true,
+      setupComplete: false,
       orgProvisionSource: 'cloud',
       orgId: payload.orgId,
       orgDisplayName: payload.orgDisplayName,
@@ -133,9 +133,13 @@
     return error instanceof Error ? error : new Error(String(error));
   }
 
-  async function joinWithCode(joinCode) {
+  async function joinWithCode(joinCode, email) {
     const code = String(joinCode || '').trim();
+    const memberEmail = String(email || '').trim().toLowerCase();
     if (!code) throw new Error('Enter your organization join code.');
+    if (!memberEmail || !memberEmail.includes('@')) {
+      throw new Error('Enter your work email for secure sharing.');
+    }
 
     const base = apiBase();
     if (!base) {
@@ -152,7 +156,7 @@
           'X-Device-Id': deviceId,
           'X-Extension-Version': browser()?.runtime?.getManifest?.()?.version || '',
         },
-        body: JSON.stringify({ joinCode: code, deviceId }),
+        body: JSON.stringify({ joinCode: code, deviceId, email: memberEmail }),
       });
     } catch (error) {
       throw apiFetchError(base, error);

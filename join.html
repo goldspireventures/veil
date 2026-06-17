@@ -31,6 +31,12 @@
           <input id="join-code" class="code" name="joinCode" autocomplete="off" required placeholder="XXXX-XXXX" />
         </div>
 
+        <div class="field">
+          <label for="join-email">Work email</label>
+          <input id="join-email" type="email" name="email" autocomplete="email" required placeholder="you@company.com" />
+          <div class="hint">Must match your organization's member list or allowed email domain.</div>
+        </div>
+
         <button type="submit" class="btn" id="submit-btn">Connect extension</button>
       </form>
 
@@ -56,6 +62,7 @@
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const joinCode = document.getElementById('join-code').value.trim();
+      const email = document.getElementById('join-email').value.trim().toLowerCase();
       const manualBase = apiBaseInput.value.trim().replace(/\/+$/, '');
       let apiBase = manualBase;
       if (apiBase) {
@@ -66,7 +73,7 @@
         app.setStatus(statusEl, 'Enter a valid organization server URL.', 'error');
         return;
       }
-      if (!joinCode) return;
+      if (!joinCode || !email) return;
 
       submitBtn.disabled = true;
       app.setStatus(statusEl, 'Joining…');
@@ -79,7 +86,7 @@
             'Content-Type': 'application/json',
             'X-Device-Id': effectiveDeviceId,
           },
-          body: JSON.stringify({ joinCode, deviceId: effectiveDeviceId }),
+          body: JSON.stringify({ joinCode, deviceId: effectiveDeviceId, email }),
         });
 
         const payload = await response.json().catch(() => ({}));

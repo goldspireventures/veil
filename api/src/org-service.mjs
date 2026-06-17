@@ -1,5 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { getPool } from './db.mjs';
+import { assertMemberEmailAllowed } from './membership.mjs';
+import { normalizeEmail } from './auth.mjs';
 
 function newProvisionToken() {
   return randomBytes(32).toString('hex');
@@ -38,11 +40,15 @@ function normalizeJoinCode(value) {
     .replace(/[\s-]+/g, '');
 }
 
-export async function joinWithCode(joinCode, deviceId) {
+export async function joinWithCode(joinCode, deviceId, email) {
   const code = normalizeJoinCode(joinCode);
   const device = String(deviceId || '').trim();
+  const memberEmail = normalizeEmail(email);
   if (!code) throw httpError(400, 'Enter your organization join code.');
   if (!device) throw httpError(400, 'Missing device id.');
+  if (!memberEmail || !memberEmail.includes('@')) {
+    throw httpError(400, 'Valid work email is required.');
+  }
 
   const pool = getPool();
   const joinResult = await pool.query(
@@ -61,6 +67,9 @@ export async function joinWithCode(joinCode, deviceId) {
   }
 
   const org = joinResult.rows[0];
+  const orgSettings = typeof org.settings === 'object' && org.settings ? org.settings : {};
+  await assertMemberEmailAllowed(pool, org.id, memberEmail, device, orgSettings);
+
   const token = newProvisionToken();
 
   const provisionResult = await pool.query(

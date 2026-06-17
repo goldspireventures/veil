@@ -104,38 +104,6 @@
             </div>
             <p class="selection-tip"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> Quick · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> Options · Outlook: use the pill on the right</p>
           </div>
-
-          <details class="card card--collapsible">
-            <summary>Password generator</summary>
-            <output id="generated-password" class="password-output">—</output>
-            <div class="row row--wrap row--gap-sm">
-              <label class="field field--inline">
-                <span>Length</span>
-                <input id="passwordLength" type="number" min="8" max="64" step="1" value="16" />
-              </label>
-              <label class="checkbox checkbox--inline">
-                <input id="passwordLowercase" type="checkbox" checked />
-                <span>a-z</span>
-              </label>
-              <label class="checkbox checkbox--inline">
-                <input id="passwordUppercase" type="checkbox" checked />
-                <span>A-Z</span>
-              </label>
-              <label class="checkbox checkbox--inline">
-                <input id="passwordDigits" type="checkbox" checked />
-                <span>0-9</span>
-              </label>
-              <label class="checkbox checkbox--inline">
-                <input id="passwordSymbols" type="checkbox" checked />
-                <span>Symbols</span>
-              </label>
-            </div>
-            <div class="row">
-              <button type="button" id="generate-password" class="btn btn--ghost">Generate</button>
-              <button type="button" id="copy-password" class="btn btn--ghost">Copy</button>
-              <button type="button" id="insert-password" class="btn btn--ghost">Insert</button>
-            </div>
-          </details>
         </div>
 
         <!-- Settings -->
@@ -157,6 +125,37 @@
                 <input id="resecureAfterUnlock" name="resecureAfterUnlock" type="checkbox" checked />
                 <span>Auto re-lock after unlock</span>
               </label>
+              <details class="card card--collapsible card--nested">
+                <summary>Password generator</summary>
+                <output id="generated-password-personal" class="password-output">—</output>
+                <div class="row row--wrap row--gap-sm">
+                  <label class="field field--inline">
+                    <span>Length</span>
+                    <input id="passwordLength-personal" type="number" min="8" max="64" step="1" value="16" />
+                  </label>
+                  <label class="checkbox checkbox--inline">
+                    <input id="passwordLowercase-personal" type="checkbox" checked />
+                    <span>a-z</span>
+                  </label>
+                  <label class="checkbox checkbox--inline">
+                    <input id="passwordUppercase-personal" type="checkbox" checked />
+                    <span>A-Z</span>
+                  </label>
+                  <label class="checkbox checkbox--inline">
+                    <input id="passwordDigits-personal" type="checkbox" checked />
+                    <span>0-9</span>
+                  </label>
+                  <label class="checkbox checkbox--inline">
+                    <input id="passwordSymbols-personal" type="checkbox" checked />
+                    <span>Symbols</span>
+                  </label>
+                </div>
+                <div class="row">
+                  <button type="button" class="btn btn--ghost js-generate-password">Generate</button>
+                  <button type="button" class="btn btn--ghost js-copy-password">Copy</button>
+                  <button type="button" class="btn btn--ghost js-insert-password">Insert</button>
+                </div>
+              </details>
             </div>
 
             <!-- Team -->
@@ -189,6 +188,37 @@
                 </label>
               </div>
               <button type="button" id="disconnect-org" class="btn btn--ghost btn--full btn--text" hidden>Leave organization</button>
+          <details class="card card--collapsible card--nested">
+            <summary>Password generator</summary>
+            <output id="generated-password" class="password-output">—</output>
+            <div class="row row--wrap row--gap-sm">
+              <label class="field field--inline">
+                <span>Length</span>
+                <input id="passwordLength" type="number" min="8" max="64" step="1" value="16" />
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordLowercase" type="checkbox" checked />
+                <span>a-z</span>
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordUppercase" type="checkbox" checked />
+                <span>A-Z</span>
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordDigits" type="checkbox" checked />
+                <span>0-9</span>
+              </label>
+              <label class="checkbox checkbox--inline">
+                <input id="passwordSymbols" type="checkbox" checked />
+                <span>Symbols</span>
+              </label>
+            </div>
+            <div class="row">
+              <button type="button" id="generate-password" class="btn btn--ghost">Generate</button>
+              <button type="button" id="copy-password" class="btn btn--ghost">Copy</button>
+              <button type="button" id="insert-password" class="btn btn--ghost">Insert</button>
+            </div>
+          </details>
               <label class="field">
                 <span>Default when securing</span>
                 <select id="defaultSecureMode" name="defaultSecureMode">
