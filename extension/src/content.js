@@ -52,6 +52,13 @@
     );
   }
 
+  async function ensureOrgSharingReady(settings) {
+    if (!canUseOrgSharing(settings)) return;
+    const email = settings.orgMemberEmail?.trim();
+    if (!email) return;
+    await orgShareMessage('ORG_REGISTER_MEMBER', { email });
+  }
+
   let orgShareSyncTimer = null;
   function scheduleOrgShareSync(settings) {
     if (!canUseOrgSharing(settings)) return;
@@ -59,6 +66,8 @@
     orgShareSyncTimer = window.setTimeout(() => {
       orgShareSyncTimer = null;
       runSafe(async () => {
+        const latest = await getSettings();
+        await ensureOrgSharingReady(latest);
         const result = await orgShareMessage('ORG_SYNC_SHARES');
         if (result?.failed > 0) {
           safeToast('Some shared unlock keys could not be retrieved — re-register your work email in Settings.', 'error');
@@ -87,7 +96,10 @@
   }
 
   function getActivePreview() {
-    return GoldspireSelection.getLivePreview() || '';
+    const local = GoldspireSelection.getLivePreview() || '';
+    if (local.trim()) return local;
+    if (isTopFrame) return remoteSelectionPreview || '';
+    return '';
   }
 
   function getSelectionSummary() {
@@ -997,6 +1009,7 @@
     }
 
     if (isOneTime && canUseOrgSharing(settings)) {
+      await ensureOrgSharingReady(settings);
       await orgShareMessage('ORG_SYNC_SHARES');
       const lookup = await orgShareMessage('ORG_LOOKUP_SHARE_KEY', { fullMarker });
       if (lookup?.key) {
@@ -1571,8 +1584,9 @@
     true,
   );
 
-  ensureSelectionStatus();
-  if (!isTopFrame) {
+  if (isTopFrame) {
+    ensureSelectionStatus();
+  } else {
     initSelectionRelay();
   }
 
@@ -1592,6 +1606,7 @@
   detectorController = GoldspireSecureDetector.initDetector(getSettings, (marker, node) => {
     runSafe((async () => {
       const settings = await getSettings();
+      await ensureOrgSharingReady(settings);
       scheduleOrgShareSync(settings);
       await unlockMarker(marker, { replaceNode: node, copyResult: false });
     })());

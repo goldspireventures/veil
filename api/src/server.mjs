@@ -11,6 +11,7 @@ import {
   createShares,
   listPendingShares,
   claimShare,
+  lookupUnlockKey,
 } from './share-service.mjs';
 import { parseAuthHeaders } from './auth.mjs';
 import {
@@ -198,6 +199,14 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && pathname === '/v1/extension/org/shares/pending') {
       const { token, deviceId } = parseAuthHeaders(req);
       const result = await listPendingShares(token, deviceId);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/v1/extension/org/shares/unlock-key') {
+      const { token, deviceId } = parseAuthHeaders(req);
+      const fingerprint = url.searchParams.get('fingerprint') || '';
+      const result = await lookupUnlockKey(token, deviceId, fingerprint);
       json(res, req, 200, result);
       return;
     }

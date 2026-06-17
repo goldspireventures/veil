@@ -63,14 +63,53 @@
     return response.json();
   }
 
-  async function isSharingAvailable() {
+  async function canLookupOrgShares() {
     const settings = await global.GoldspireSettings.load();
     return Boolean(
       apiBase()
       && settings.orgProvisionSource === 'cloud'
-      && settings.orgId
-      && settings.setupComplete,
+      && settings.orgId,
     );
+  }
+
+  async function ensureMemberRegistered() {
+    const settings = await global.GoldspireSettings.load();
+    const email = String(settings.orgMemberEmail || '').trim();
+    if (!email) return false;
+    await registerMember(email);
+    return true;
+  }
+
+  async function fetchUnlockKeyFromServer(fullMarker) {
+    const fingerprints = global.GoldspireShareKeys.markerFingerprints
+      ? await global.GoldspireShareKeys.markerFingerprints(fullMarker)
+      : [await global.GoldspireShareKeys.markerFingerprint(fullMarker)];
+
+    for (const fingerprint of fingerprints) {
+      try {
+        const result = await apiFetch(
+          `/v1/extension/org/shares/unlock-key?fingerprint=${encodeURIComponent(fingerprint)}`,
+        );
+        if (!result?.unlockKey) continue;
+
+        const map = await loadPendingKeyMap();
+        map[fingerprint] = {
+          key: result.unlockKey,
+          shareId: result.shareId,
+          expiresAt: new Date(result.expiresAt).getTime(),
+        };
+        await savePendingKeyMap(map);
+        return result.unlockKey;
+      } catch {
+        // Try next fingerprint variant.
+      }
+    }
+    return '';
+  }
+
+  async function isSharingAvailable() {
+    const settings = await global.GoldspireSettings.load();
+    return (await canLookupOrgShares()) && settings.setupComplete;
   }
 
   async function registerMember(email, displayName = '') {
@@ -120,10 +159,12 @@
   }
 
   async function syncPendingShares() {
-    if (!(await isSharingAvailable())) return { synced: false, reason: 'not_available' };
+    if (!(await canLookupOrgShares())) return { synced: false, reason: 'not_available' };
 
     const settings = await global.GoldspireSettings.load();
     if (!settings.orgMemberEmail) return { synced: false, reason: 'no_email' };
+
+    await ensureMemberRegistered();
 
     const payload = await apiFetch('/v1/extension/org/shares/pending');
     const map = await loadPendingKeyMap();
@@ -132,7 +173,16 @@
 
     for (const share of payload.shares || []) {
       try {
-        const unlockKey = await global.GoldspireShareKeys.unwrapSecret(share.wrappedKey);
+        let unlockKey = '';
+        try {
+          unlockKey = await global.GoldspireShareKeys.unwrapSecret(share.wrappedKey);
+        } catch {
+          unlockKey = String(share.unlockKey || '').trim();
+        }
+        if (!unlockKey) {
+          failed += 1;
+          continue;
+        }
         const entry = {
           key: unlockKey,
           shareId: share.id,
@@ -144,7 +194,7 @@
         await apiFetch(`/v1/extension/org/shares/${share.id}/claim`, { method: 'POST', body: '{}' });
       } catch (error) {
         failed += 1;
-        console.warn('Goldspire: failed to unwrap pending share', error);
+        console.warn('Goldspire: failed to sync pending share', error);
       }
     }
 
@@ -175,7 +225,10 @@
     }
 
     await savePendingKeyMap(map);
-    return '';
+
+    if (!(await canLookupOrgShares())) return '';
+    await ensureMemberRegistered();
+    return fetchUnlockKeyFromServer(fullMarker);
   }
 
   async function createDeliveries({ recipients, recipientKeys, unlockSecret, markerFingerprint, expiresAt }) {
@@ -195,6 +248,7 @@
       method: 'POST',
       body: JSON.stringify({
         markerFingerprint,
+        unlockSecret,
         expiresAt,
         deliveries,
       }),
@@ -233,6 +287,8 @@
 
   global.GoldspireOrgShare = {
     isSharingAvailable,
+    canLookupOrgShares,
+    ensureMemberRegistered,
     registerMember,
     listMembers,
     syncPendingShares,

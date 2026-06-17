@@ -48,6 +48,9 @@ async function syncCloudOrgPolicy() {
 
 async function syncCloudOrgShares() {
   try {
+    if (await GoldspireOrgShare.canLookupOrgShares?.()) {
+      await GoldspireOrgShare.ensureMemberRegistered?.();
+    }
     await GoldspireOrgShare.syncPendingShares();
   } catch (error) {
     console.warn('Goldspire Secure Text: share inbox sync failed', error);

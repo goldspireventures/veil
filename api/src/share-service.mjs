@@ -1,7 +1,39 @@
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
 import { authenticateRequest, normalizeEmail } from './auth.mjs';
 import { assertMemberEmailAllowed, loadOrgSettings } from './membership.mjs';
+
+function inboxEncryptionKey(orgId, recipientEmail) {
+  const pepper = process.env.ORG_INBOX_ENC_KEY || process.env.DATABASE_URL || 'goldspire-inbox-dev-key';
+  return createHash('sha256').update(`${pepper}:${orgId}:${recipientEmail}`, 'utf8').digest();
+}
+
+function encryptUnlockSecret(orgId, recipientEmail, unlockSecret) {
+  const key = inboxEncryptionKey(orgId, recipientEmail);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const ciphertext = Buffer.concat([cipher.update(String(unlockSecret), 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, ciphertext]).toString('base64url');
+}
+
+function decryptUnlockSecret(orgId, recipientEmail, encoded) {
+  if (!encoded) return '';
+  try {
+    const key = inboxEncryptionKey(orgId, recipientEmail);
+    const buf = Buffer.from(encoded, 'base64url');
+    const iv = buf.subarray(0, 12);
+    const tag = buf.subarray(12, 28);
+    const ciphertext = buf.subarray(28);
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return plaintext.toString('utf8');
+  } catch {
+    return '';
+  }
+}
 
 function validatePublicKeyJwk(jwk) {
   if (!jwk || typeof jwk !== 'object') throw httpError(400, 'publicKeyJwk is required.');
@@ -91,6 +123,9 @@ export async function createShares(token, deviceId, body = {}) {
 
   if (!body.markerFingerprint?.trim()) throw httpError(400, 'markerFingerprint is required.');
 
+  const unlockSecret = String(body.unlockSecret || '').trim();
+  if (!unlockSecret) throw httpError(400, 'unlockSecret is required.');
+
   const expiresAt = body.expiresAt
     ? new Date(body.expiresAt)
     : new Date(Date.now() + 72 * 60 * 60 * 1000);
@@ -128,8 +163,8 @@ export async function createShares(token, deviceId, body = {}) {
 
     const insert = await pool.query(
       `INSERT INTO pending_unlocks
-         (org_id, sender_email, recipient_email, wrapped_key, marker_fingerprint, expires_at)
-       VALUES ($1, $2, $3, $4::jsonb, $5, $6)
+         (org_id, sender_email, recipient_email, wrapped_key, marker_fingerprint, expires_at, unlock_secret_enc)
+       VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7)
        RETURNING id, recipient_email, expires_at`,
       [
         auth.org_id,
@@ -138,6 +173,7 @@ export async function createShares(token, deviceId, body = {}) {
         JSON.stringify(delivery.wrappedKey),
         body.markerFingerprint.trim(),
         expiresAt.toISOString(),
+        encryptUnlockSecret(auth.org_id, recipientEmail, unlockSecret),
       ],
     );
 
@@ -163,7 +199,7 @@ export async function listPendingShares(token, deviceId) {
 
   const pool = getPool();
   const result = await pool.query(
-    `SELECT id, sender_email, wrapped_key, marker_fingerprint, expires_at, created_at
+    `SELECT id, sender_email, wrapped_key, marker_fingerprint, expires_at, created_at, unlock_secret_enc
      FROM pending_unlocks
      WHERE org_id = $1
        AND recipient_email = $2
@@ -180,6 +216,7 @@ export async function listPendingShares(token, deviceId) {
       id: row.id,
       senderEmail: row.sender_email,
       wrappedKey: row.wrapped_key,
+      unlockKey: decryptUnlockSecret(auth.org_id, auth.member_email, row.unlock_secret_enc) || undefined,
       markerFingerprint: row.marker_fingerprint,
       expiresAt: row.expires_at,
       createdAt: row.created_at,
@@ -205,4 +242,44 @@ export async function claimShare(token, deviceId, shareId) {
 
   if (result.rowCount === 0) throw httpError(404, 'Share not found or already claimed.');
   return { ok: true, id: result.rows[0].id };
+}
+
+export async function lookupUnlockKey(token, deviceId, fingerprint) {
+  const auth = await authenticateRequest(token, deviceId);
+  if (!auth.member_email) {
+    throw httpError(400, 'Register your work email in the extension before unlocking shared messages.');
+  }
+
+  const fp = String(fingerprint || '').trim();
+  if (!fp) throw httpError(400, 'fingerprint is required.');
+
+  const pool = getPool();
+  const result = await pool.query(
+    `SELECT id, unlock_secret_enc, expires_at, claimed_at
+     FROM pending_unlocks
+     WHERE org_id = $1
+       AND recipient_email = $2
+       AND marker_fingerprint = $3
+       AND expires_at > now()
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [auth.org_id, auth.member_email, fp],
+  );
+
+  if (result.rowCount === 0) {
+    throw httpError(404, 'No unlock key found for this message.');
+  }
+
+  const row = result.rows[0];
+  const unlockKey = decryptUnlockSecret(auth.org_id, auth.member_email, row.unlock_secret_enc);
+  if (!unlockKey) {
+    throw httpError(404, 'Unlock key is unavailable. Ask the sender to share again.');
+  }
+
+  return {
+    unlockKey,
+    shareId: row.id,
+    expiresAt: row.expires_at,
+    claimed: Boolean(row.claimed_at),
+  };
 }
