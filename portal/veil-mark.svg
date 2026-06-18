@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" role="img" aria-label="Veil">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d4a017"/>
+      <stop offset="100%" stop-color="#f0c14b"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="12" fill="#0d111b"/>
+  <path fill="url(#gold)" d="M24 10c-6 8-12 12-12 18 0 6.6 5.4 12 12 12s12-5.4 12-12c0-6-6-10-12-18zm0 30c-4.4 0-8-3.6-8-8 0-3.4 2.8-6.4 8-12.2 5.2 5.8 8 8.8 8 12.2 0 4.4-3.6 8-8 8z"/>
+</svg>

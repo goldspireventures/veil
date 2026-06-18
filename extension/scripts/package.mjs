@@ -15,6 +15,7 @@ for (const item of ['manifest.json', 'src', 'popup', 'styles', 'icons', 'unlock'
 }
 
 mkdirSync(unlockDeploy, { recursive: true });
+cpSync(join(root, 'icons'), join(unlockDeploy, 'icons'), { recursive: true });
 for (const file of ['unlock.css', 'unlock.js']) {
   cpSync(join(root, 'unlock', file), join(unlockDeploy, file));
 }

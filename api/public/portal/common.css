@@ -190,13 +190,8 @@ th { color: var(--muted); font-weight: 600; }
 .brand__mark {
   width: 42px;
   height: 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #d4a017, #f0c14b);
-  color: #111827;
-  font-weight: 800;
-  font-size: 1.1rem;
+  flex-shrink: 0;
+  display: block;
 }
 
 .brand__name {

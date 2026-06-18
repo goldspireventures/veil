@@ -30,6 +30,7 @@ Use this before announcing Veil publicly or onboarding paying customers.
 
 - [ ] Privacy policy published (`privacy.html`)
 - [ ] Terms published (`terms.html`)
+- [ ] Brand assets consistent (`docs/BRAND.md`, extension icons, portal favicon)
 - [ ] Threat model reviewed (`extension/docs/THREAT_MODEL.md`)
 - [ ] Support email monitored: support@goldspireventures.com
 

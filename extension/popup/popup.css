@@ -62,11 +62,9 @@ body {
 .popup__logo {
   width: 40px;
   height: 40px;
-  display: grid;
-  place-items: center;
+  flex-shrink: 0;
+  display: block;
   border-radius: 12px;
-  background: linear-gradient(135deg, #d4a017, #f0c14b);
-  font-size: 18px;
 }
 
 .popup__header h1 {
