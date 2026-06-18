@@ -64,7 +64,7 @@
       seen.add(key);
       out.push(entry);
     }
-    return out;
+    return global.GoldspireDetectionLib?.sortDetections?.(out) || out;
   }
 
   global.GoldspireDetection = {

@@ -138,10 +138,11 @@
 
     const trimmed = input.trim();
     if (
-      trimmed.length >= 8
+      trimmed.length >= 10
       && trimmed.length <= 256
       && /^[A-Za-z0-9_\-./+]+$/.test(trimmed)
       && !/^\d+$/.test(trimmed)
+      && !shouldSkipGenericSecretGuess(trimmed)
       && !findJwts(trimmed).some((entry) => entry.matchedTextRaw === trimmed)
     ) {
       const key = `generic:${trimmed}`;
@@ -252,6 +253,94 @@
     return Number(remainder) % 97 === 1;
   }
 
+  const IBAN_LENGTH_BY_COUNTRY = {
+    AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22,
+    BR: 29, BY: 28, CH: 21, CR: 22, CY: 28, CZ: 24, DE: 22, DK: 18, DO: 28,
+    EE: 20, ES: 24, FI: 18, FO: 18, FR: 27, GB: 22, GE: 22, GI: 23, GL: 18,
+    GR: 27, GT: 28, HR: 21, HU: 28, IE: 22, IL: 23, IS: 26, IT: 27, JO: 30,
+    KW: 30, KZ: 20, LB: 28, LC: 32, LI: 21, LT: 20, LU: 20, LV: 21, MC: 27,
+    MD: 24, ME: 22, MK: 19, MR: 27, MT: 31, MU: 30, NL: 18, NO: 15, PK: 24,
+    PL: 28, PS: 29, PT: 25, QA: 29, RO: 24, RS: 22, SA: 24, SE: 24, SI: 19,
+    SK: 24, SM: 27, TN: 24, TR: 26, UA: 29, VG: 24, XK: 20,
+  };
+
+  function isKnownIbanCountry(code) {
+    return Object.prototype.hasOwnProperty.call(
+      IBAN_LENGTH_BY_COUNTRY,
+      String(code || '').toUpperCase(),
+    );
+  }
+
+  function compactIbanToken(value) {
+    return String(value || '').replace(/\s/g, '').toUpperCase();
+  }
+
+  function looksLikeIbanPrefix(value) {
+    const compact = compactIbanToken(value);
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]*$/.test(compact)) return false;
+    if (compact.length < 4) return false;
+    const country = compact.slice(0, 2);
+    if (!isKnownIbanCountry(country)) return false;
+    return compact.length <= IBAN_LENGTH_BY_COUNTRY[country];
+  }
+
+  function looksLikeSwiftBic(value) {
+    const compact = compactIbanToken(value);
+    return /^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(compact);
+  }
+
+  function looksLikeUuid(value) {
+    const compact = String(value || '').trim();
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(compact);
+  }
+
+  function shouldSkipGenericSecretGuess(value) {
+    const compact = compactIbanToken(value);
+    return (
+      looksLikeIbanPrefix(compact)
+      || looksLikeSwiftBic(compact)
+      || looksLikeUuid(compact)
+      || /^[A-Z]{2}\d{6,}$/.test(compact)
+    );
+  }
+
+  function findIbanPrefixes(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+    const pattern = /\b([A-Z]{2}\d{2}(?:[ \t]?[A-Z0-9]{1,4}){0,8})\b/gi;
+
+    let match;
+    while ((match = pattern.exec(input)) !== null) {
+      const compact = compactIbanToken(match[1]);
+      if (!looksLikeIbanPrefix(compact)) continue;
+      const country = compact.slice(0, 2);
+      const expectedLen = IBAN_LENGTH_BY_COUNTRY[country];
+      if (compact.length >= expectedLen && ibanMod97(compact)) continue;
+
+      if (seen.has(compact)) continue;
+      seen.add(compact);
+
+      const progress = compact.length / expectedLen;
+      let confidence = 58 + Math.round(progress * 22);
+      if (compact.length >= 8) confidence += 8;
+      if (compact.length >= 12) confidence += 4;
+
+      results.push({
+        category: 'iban',
+        matchedText: redactPreview(compact, { showLast: 4 }),
+        matchedTextRaw: compact,
+        index: match.index,
+        confidence: Math.min(86, confidence),
+        severity: 'high',
+        recommendation: 'Mask or encrypt financial identifiers before sharing.',
+      });
+    }
+
+    return results;
+  }
+
   function findIbans(text) {
     const input = String(text || '');
     if (!input) return [];
@@ -287,6 +376,13 @@
           break;
         }
       }
+    }
+
+    for (const prefixHit of findIbanPrefixes(input)) {
+      const key = compactIbanToken(prefixHit.matchedTextRaw);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push(prefixHit);
     }
 
     return results;
@@ -329,6 +425,198 @@
         confidence: 75,
         severity: 'high',
         recommendation: 'Mask or encrypt bank account details before sharing.',
+      });
+    }
+    return results;
+  }
+
+  function routingNumberCheck(digits) {
+    const normalized = normalizeDigits(digits);
+    if (!/^\d{9}$/.test(normalized)) return false;
+    const weights = [3, 7, 1, 3, 7, 1, 3, 7, 1];
+    let sum = 0;
+    for (let i = 0; i < 9; i += 1) sum += Number(normalized[i]) * weights[i];
+    return sum % 10 === 0;
+  }
+
+  function findRoutingNumbers(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+    const patterns = [
+      /\b(?:routing|ABA|RTN|sort code)[#:\s-]*(\d{3})[\s-]?(\d{3})[\s-]?(\d{3})\b/gi,
+      /\b(?:routing|ABA|RTN|sort code)[#:\s-]*(\d{9})\b/gi,
+    ];
+
+    for (const pattern of patterns) {
+      let match;
+      while ((match = pattern.exec(input)) !== null) {
+        const raw = match[3] ? `${match[1]}${match[2]}${match[3]}` : match[1];
+        if (!routingNumberCheck(raw)) continue;
+        const key = raw;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push({
+          category: 'routing_number',
+          matchedText: redactPreview(raw, { showLast: 3 }),
+          matchedTextRaw: match[0].trim(),
+          index: match.index,
+          confidence: 84,
+          severity: 'high',
+          recommendation: 'Mask or encrypt bank routing details before sharing.',
+        });
+      }
+    }
+    return results;
+  }
+
+  function findSwiftBics(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+    const pattern = /\b([A-Z]{4}[A-Z]{2}[A-Z0-9]{2}(?:[A-Z0-9]{3})?)\b/gi;
+
+    let match;
+    while ((match = pattern.exec(input)) !== null) {
+      const raw = match[1].toUpperCase();
+      if (!looksLikeSwiftBic(raw)) continue;
+      if (seen.has(raw)) continue;
+      seen.add(raw);
+      results.push({
+        category: 'swift_bic',
+        matchedText: redactPreview(raw, { showLast: 3 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 86,
+        severity: 'high',
+        recommendation: 'Mask or encrypt SWIFT/BIC codes before sharing.',
+      });
+    }
+    return results;
+  }
+
+  function findTaxIds(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+
+    const labeled = /\b(?:EIN|TIN|VAT|GST|tax(?:\s+ID)?)[#:\s-]*([A-Z0-9][A-Z0-9\s./-]{6,18}[A-Z0-9])\b/gi;
+    let match;
+    while ((match = labeled.exec(input)) !== null) {
+      const raw = match[1].trim();
+      const key = raw.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({
+        category: 'tax_id',
+        matchedText: redactPreview(raw.replace(/\s/g, ''), { showLast: 3 }),
+        matchedTextRaw: raw,
+        index: match.index + match[0].indexOf(raw),
+        confidence: 82,
+        severity: 'high',
+        recommendation: 'Mask or encrypt tax identifiers before sharing.',
+      });
+    }
+
+    const einPattern = /\b\d{2}-\d{7}\b/g;
+    while ((match = einPattern.exec(input)) !== null) {
+      const raw = match[0];
+      const key = `ein:${raw}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({
+        category: 'tax_id',
+        matchedText: redactPreview(raw, { showLast: 4 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 78,
+        severity: 'high',
+        recommendation: 'This may be a US EIN — verify before sharing.',
+      });
+    }
+
+    const vatPattern = /\b(?:ATU\d{8}|DE\d{9}|FR[A-Z0-9]{2}\d{9}|GB(?:\d{9}|\d{12})|IE\d[A-Z0-9]{7}|NL\d{9}B\d{2})\b/gi;
+    while ((match = vatPattern.exec(input)) !== null) {
+      const raw = match[0].toUpperCase();
+      const key = `vat:${raw}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({
+        category: 'tax_id',
+        matchedText: redactPreview(raw, { showLast: 3 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 85,
+        severity: 'high',
+        recommendation: 'Mask or encrypt VAT/tax numbers before sharing.',
+      });
+    }
+
+    return results;
+  }
+
+  function nhsCheck(digits) {
+    const normalized = normalizeDigits(digits);
+    if (!/^\d{10}$/.test(normalized)) return false;
+    let sum = 0;
+    for (let i = 0; i < 9; i += 1) sum += Number(normalized[i]) * (10 - i);
+    const remainder = sum % 11;
+    const check = remainder === 0 ? 0 : 11 - remainder;
+    if (check === 11) return false;
+    return Number(normalized[9]) === check;
+  }
+
+  function findNhsNumbers(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+    const pattern = /\b(?:NHS(?:\s+number)?)[#:\s-]*(\d{3}[\s-]?\d{3}[\s-]?\d{4})\b/gi;
+
+    let match;
+    while ((match = pattern.exec(input)) !== null) {
+      const raw = match[1];
+      if (!nhsCheck(raw)) continue;
+      const key = normalizeDigits(raw);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({
+        category: 'nhs_number',
+        matchedText: redactPreview(key, { showLast: 3 }),
+        matchedTextRaw: raw,
+        index: match.index + match[0].indexOf(raw),
+        confidence: 86,
+        severity: 'critical',
+        recommendation: 'UK NHS numbers are personal health data — do not share in plain text.',
+      });
+    }
+    return results;
+  }
+
+  function findDatesOfBirth(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+    const pattern = /\b(?:DOB|D\.O\.B\.|date of birth|born on|birth\s*date)[#:\s-]*(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}[/.-]\d{1,2}[/.-]\d{1,2})\b/gi;
+
+    let match;
+    while ((match = pattern.exec(input)) !== null) {
+      const raw = match[1];
+      const key = raw.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({
+        category: 'date_of_birth',
+        matchedText: redactPreview(raw, { showLast: 0 }),
+        matchedTextRaw: raw,
+        index: match.index + match[0].indexOf(raw),
+        confidence: 80,
+        severity: 'high',
+        recommendation: 'Dates of birth are personal data — mask or encrypt before sharing.',
       });
     }
     return results;
@@ -499,14 +787,52 @@
     return results;
   }
 
+  const DETECTION_CATEGORY_PRIORITY = {
+    iban: 95,
+    credit_card: 94,
+    ssn: 93,
+    medical_record_number: 92,
+    nhs_number: 92,
+    jwt: 91,
+    bank_account: 90,
+    routing_number: 90,
+    swift_bic: 89,
+    tax_id: 89,
+    passport: 89,
+    driver_license: 88,
+    national_id: 87,
+    date_of_birth: 86,
+    api_key: 70,
+    password: 65,
+    email: 60,
+    phone: 60,
+    customer_id: 55,
+    internal_company_reference: 50,
+  };
+
+  function sortDetections(results) {
+    return [...results].sort((a, b) => {
+      const confDiff = (Number(b.confidence) || 0) - (Number(a.confidence) || 0);
+      if (confDiff !== 0) return confDiff;
+      const priA = DETECTION_CATEGORY_PRIORITY[a.category] || 0;
+      const priB = DETECTION_CATEGORY_PRIORITY[b.category] || 0;
+      return priB - priA;
+    });
+  }
+
   function analyzeAll(text, context = {}) {
-    return [
+    return sortDetections([
       ...findCreditCards(text),
       ...findJwts(text),
       ...findApiKeys(text),
       ...findEmails(text, context),
       ...findPhones(text, context),
       ...findIbans(text),
+      ...findRoutingNumbers(text),
+      ...findSwiftBics(text),
+      ...findTaxIds(text),
+      ...findNhsNumbers(text),
+      ...findDatesOfBirth(text),
       ...findSsns(text),
       ...findBankAccounts(text),
       ...findNationalIds(text),
@@ -516,7 +842,7 @@
       ...findCustomerIds(text),
       ...findInternalCompanyRefs(text),
       ...findPasswords(text, context),
-    ];
+    ]);
   }
 
   function isSensitiveSelectionText(text, context = {}) {
@@ -539,6 +865,15 @@
     findEmails,
     findPhones,
     findIbans,
+    findIbanPrefixes,
+    findRoutingNumbers,
+    findSwiftBics,
+    findTaxIds,
+    findNhsNumbers,
+    findDatesOfBirth,
+    looksLikeIbanPrefix,
+    shouldSkipGenericSecretGuess,
+    sortDetections,
     findSsns,
     findBankAccounts,
     findNationalIds,

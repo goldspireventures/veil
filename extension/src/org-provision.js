@@ -74,7 +74,7 @@
       enforceStrongPassphrase: settings.enforceStrongPassphrase !== false,
       copilotEnabled: settings.copilotEnabled !== false,
       productAnalytics: settings.productAnalytics !== false,
-      selectionUiMode: settings.selectionUiMode || 'quiet',
+      selectionUiMode: settings.selectionUiMode || 'smart',
       resecureDelaySeconds: settings.resecureDelaySeconds,
       dlpPolicy: dlpRaw,
       teamId: String(settings.teamId || '').trim(),
@@ -114,7 +114,7 @@
       enforceStrongPassphrase: payload.enforceStrongPassphrase !== false,
       copilotEnabled: payload.copilotEnabled !== false,
       productAnalytics: payload.productAnalytics !== false,
-      selectionUiMode: payload.selectionUiMode || 'quiet',
+      selectionUiMode: payload.selectionUiMode || 'smart',
     };
 
     if (payload.resecureDelaySeconds != null) {

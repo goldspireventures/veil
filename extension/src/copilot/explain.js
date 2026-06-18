@@ -13,7 +13,11 @@
     const confidence = Number(detection.confidence) >= 50
       ? ` · ${Math.round(detection.confidence)}% match`
       : '';
-    return `${label}${severity}${confidence}`;
+    const fw = detection.compliance?.length
+      ? detection.compliance
+      : (global.GoldspireCompliance?.frameworksFor?.(detection.category) || []);
+    const compliance = fw.length ? ` · ${fw.slice(0, 2).join(', ')}` : '';
+    return `${label}${severity}${confidence}${compliance}`;
   }
 
   function buildTriggerLabel(context = {}, alreadyInserted = false) {

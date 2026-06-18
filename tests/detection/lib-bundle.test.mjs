@@ -35,11 +35,39 @@ test('findJwts detects standard JWT shape', () => {
   assert.ok(hits[0].confidence >= 90);
 });
 
-test('findApiKeys detects common prefixes', () => {
-  const hits = lib.findApiKeys('key sk-abcdefghijklmnopqrstuvwxyz123456');
+test('findIbans detects partial Irish IBAN while typing', () => {
+  const hits = lib.findIbans('IE25AIBK');
   assert.equal(hits.length, 1);
-  assert.equal(hits[0].category, 'api_key');
-  assert.ok(hits[0].confidence >= 90);
+  assert.equal(hits[0].category, 'iban');
+  assert.ok(hits[0].confidence >= 50);
+  assert.equal(lib.findApiKeys('IE25AIBK').length, 0);
+});
+
+test('findApiKeys generic fallback skips IBAN and SWIFT prefixes', () => {
+  assert.equal(lib.findApiKeys('IE25AIBK9311').length, 0);
+  assert.equal(lib.findApiKeys('AIBKIE2D').length, 0);
+});
+
+test('analyzeAll prefers IBAN over generic secret guess', () => {
+  const hits = lib.analyzeAll('IE25AIBK');
+  assert.equal(hits[0].category, 'iban');
+});
+
+test('findSwiftBics detects BIC codes', () => {
+  const hits = lib.findSwiftBics('pay via AIBKIE2D only');
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].category, 'swift_bic');
+});
+
+test('findTaxIds detects US EIN pattern', () => {
+  const hits = lib.findTaxIds('EIN 12-3456789');
+  assert.ok(hits.some((h) => h.category === 'tax_id'));
+});
+
+test('findDatesOfBirth detects labeled DOB', () => {
+  const hits = lib.findDatesOfBirth('patient DOB: 14/03/1985');
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].category, 'date_of_birth');
 });
 
 test('isSensitiveSelectionText uses detectors and legacy heuristics', () => {

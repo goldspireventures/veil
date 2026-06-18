@@ -4,8 +4,13 @@
 (function (global) {
   const FRAMEWORKS = Object.freeze({
     credit_card: ['PCI DSS', 'GDPR'],
-    iban: ['PCI DSS', 'GDPR'],
-    bank_account: ['PCI DSS', 'GDPR', 'SOC 2'],
+    iban: ['GDPR', 'PCI DSS', 'SOC 2'],
+    routing_number: ['PCI DSS', 'GLBA', 'SOC 2', 'GDPR'],
+    swift_bic: ['PCI DSS', 'GLBA', 'SOC 2', 'GDPR'],
+    tax_id: ['GDPR', 'SOC 2', 'GLBA'],
+    nhs_number: ['GDPR', 'HIPAA'],
+    date_of_birth: ['GDPR', 'HIPAA'],
+    bank_account: ['PCI DSS', 'GDPR', 'SOC 2', 'GLBA'],
     api_key: ['SOC 2', 'ISO 27001'],
     jwt: ['SOC 2', 'ISO 27001'],
     password: ['SOC 2', 'ISO 27001'],

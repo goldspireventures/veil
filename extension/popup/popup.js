@@ -11,6 +11,9 @@ const PROFILE_DEFAULTS = {
     enforceStrongPassphrase: true,
     resecureDelaySeconds: 60,
     defaultSecureMode: 'team',
+    copilotEnabled: true,
+    productAnalytics: false,
+    selectionUiMode: 'smart',
   },
   organization: {
     securityProfile: 'organization',
@@ -21,7 +24,7 @@ const PROFILE_DEFAULTS = {
     defaultSecureMode: 'team',
     copilotEnabled: true,
     productAnalytics: true,
-    selectionUiMode: 'quiet',
+    selectionUiMode: 'smart',
   },
 };
 
@@ -51,7 +54,7 @@ const defaults = {
   orgProvisionSource: '',
   orgPolicyVersion: 0,
   orgMemberEmail: '',
-  copilotEnabled: false,
+  copilotEnabled: true,
   dlpMode: 'off',
 };
 

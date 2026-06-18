@@ -15,12 +15,14 @@
     "setup:cloud": "npm run db:migrate && npm run db:seed",
     "api:dev": "node api/src/server.mjs",
     "dev": "npm run env:apply && npm run api:dev",
+    "stripe:listen": "stripe listen --forward-to localhost:3015/v1/webhooks/stripe",
     "test": "node --test tests/detection/*.test.mjs tests/scenarios/*.test.mjs tests/share-recipients.test.mjs",
     "test:detection": "node --test tests/detection/*.test.mjs",
     "test:scenarios": "node --test tests/scenarios/*.test.mjs",
     "e2e": "node scripts/e2e-smoke.mjs"
   },
   "dependencies": {
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "stripe": "^22.2.1"
   }
 }

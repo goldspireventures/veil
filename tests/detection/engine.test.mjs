@@ -32,7 +32,7 @@ test('detection engine registers and analyzes credit cards', () => {
   registerBuiltinDetectors(sandbox);
 
   const engine = sandbox.globalThis.GoldspireDetection;
-  assert.equal(engine.getDetectors().length, 15);
+  assert.equal(engine.getDetectors().length, 20);
 
   const results = engine.analyze('4111111111111111', { source: 'selection' });
   assert.ok(results.length >= 1);

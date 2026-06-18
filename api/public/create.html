@@ -31,13 +31,13 @@
         <div class="field">
           <label for="allowed-domain">Company email domain</label>
           <input id="allowed-domain" name="allowedEmailDomain" placeholder="company.com" autocomplete="off" />
-          <div class="hint">Optional. If set, only addresses like <code>name@company.com</code> can join. Leave blank to invite people individually.</div>
+          <div class="hint">Optional. If set, only addresses like <code>name@company.com</code> can join. If blank, <strong>only people you add in Admin → Members</strong> can join — add their work emails before they try.</div>
         </div>
 
         <div class="field">
           <label for="team-passphrase">Team passphrase</label>
           <input id="team-passphrase" name="teamPassphrase" type="password" required minlength="12" autocomplete="new-password" />
-          <div class="hint">At least 12 characters. Members receive this in the extension when they join. Store a copy in your team password manager.</div>
+          <div class="hint">At least 12 characters. Synced to members automatically when they join — also store a copy in your team password manager.</div>
         </div>
 
         <div class="btn-row">
@@ -85,6 +85,15 @@
         <button type="button" class="btn" id="open-admin">Open admin</button>
         <a class="btn btn--ghost" href="join.html">Member join page</a>
         <a class="btn btn--ghost" href="install.html">Install guide</a>
+      </div>
+
+      <div class="card card--flat" style="margin-top:1rem;padding:1rem;">
+        <strong>Next: turn on compliance controls</strong>
+        <ol class="steps">
+          <li>Open <strong>Admin → Policy pack</strong> and choose Finance, Healthcare, GDPR, or Engineering.</li>
+          <li>Add member emails in <strong>Admin → Members</strong> if you did not set a company domain.</li>
+          <li>Send the invite email below.</li>
+        </ol>
       </div>
 
       <div class="invite-box">
@@ -158,8 +167,8 @@ Your team is using Veil by Goldspire to protect sensitive text in email before i
 
 1. Install Veil: ${installUrl}
 2. Open the extension → Team → join code: ${result.joinCode}
-3. Use your work email when joining.
-4. Your admin will share the team passphrase separately (use your password manager).
+3. Use your work email when joining (must be on the admin member list unless your org uses a company domain).
+4. Veil syncs the team passphrase automatically — you can also save it from your password manager if your admin shared it separately.
 
 External recipients without Veil can use the hosted unlock page when you send a secure link — share the passphrase out of band.
 

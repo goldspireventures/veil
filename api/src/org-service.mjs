@@ -17,9 +17,9 @@ function orgPayload(org, provisionToken, teamContext = null) {
     enforceStrongPassphrase: settings.enforceStrongPassphrase !== false,
     copilotEnabled: settings.copilotEnabled !== false,
     productAnalytics: settings.productAnalytics !== false,
-    selectionUiMode: ['quiet', 'smart', 'always'].includes(settings.selectionUiMode)
+      selectionUiMode: ['quiet', 'smart', 'always'].includes(settings.selectionUiMode)
       ? settings.selectionUiMode
-      : 'quiet',
+      : 'smart',
     membershipPolicy: ['open', 'invite', 'domain'].includes(settings.membershipPolicy)
       ? settings.membershipPolicy
       : 'invite',

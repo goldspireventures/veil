@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Veil pricing — free personal use, team plans for regulated industries, enterprise deployment." />
+  <title>Pricing — Veil by Goldspire</title>
+  <link rel="stylesheet" href="portal/common.css" />
+  <link rel="icon" href="portal/favicon.png" sizes="48x48" />
+  <link rel="icon" href="portal/veil-mark.svg" type="image/svg+xml" />
+</head>
+<body>
+  <div class="layout layout--wide">
+    <header class="site-header">
+      <div class="brand">
+        <img class="brand__mark" src="portal/veil-mark.svg" alt="" width="42" height="42" />
+        <div>
+          <strong class="brand__name">Veil</strong>
+          <span class="brand__byline">by Goldspire</span>
+        </div>
+      </div>
+      <nav class="nav nav--header" data-portal-nav></nav>
+    </header>
+
+    <section class="hero card">
+      <p class="eyebrow">Simple pricing for a unique product</p>
+      <h1>Browser-native DLP and encryption — without another gateway</h1>
+      <p class="lede hero__lede">
+        Veil is the only extension that secures text <em>inside</em> Gmail and Outlook compose, ships policy packs for regulated teams,
+        and lets recipients unlock without installing anything. No competitor bundles all of that.
+      </p>
+      <p class="hint">Launch offer: Team cloud is <strong>free during early access</strong> while we onboard design partners. Prices below are what we will charge at general availability.</p>
+    </section>
+
+    <section class="grid-3">
+      <div class="card card--flat price-card">
+        <p class="eyebrow">Personal</p>
+        <p class="price-card__amount">Free</p>
+        <p class="hint">Forever, one browser profile</p>
+        <ul class="trust-list">
+          <li>Inline <code>[redacted]</code> encrypt &amp; unlock</li>
+          <li>Veil copilot on paste &amp; typing</li>
+          <li>Hosted unlock links for recipients</li>
+          <li>Password generator</li>
+        </ul>
+        <a class="btn btn--ghost" href="install.html">Install free</a>
+      </div>
+
+      <div class="card price-card price-card--featured">
+        <p class="eyebrow">Team</p>
+        <p class="price-card__amount">$7 <span class="price-card__unit">/ user / mo</span></p>
+        <p class="hint">Billed annually · min 5 seats · <strong>free now</strong> in early access</p>
+        <ul class="trust-list">
+          <li>Everything in Personal</li>
+          <li>Org admin, join codes, member directory</li>
+          <li>Policy packs: Finance, Healthcare, GDPR, Engineering</li>
+          <li>Team tokens &amp; direct-share keys</li>
+          <li>Metadata-only security events + SIEM webhook</li>
+          <li>Chrome / Edge managed policy deployment</li>
+        </ul>
+        <a class="btn" href="create.html">Set up your team</a>
+      </div>
+
+      <div class="card card--flat price-card">
+        <p class="eyebrow">Enterprise</p>
+        <p class="price-card__amount">Custom</p>
+        <p class="hint">Typically from $12 / user / mo at 100+ seats</p>
+        <ul class="trust-list">
+          <li>Everything in Team</li>
+          <li>MDM / Intune rollout support</li>
+          <li>Custom policy overlays &amp; sub-teams</li>
+          <li>Priority support &amp; onboarding workshop</li>
+          <li>Annual contract &amp; security review pack</li>
+        </ul>
+        <a class="btn btn--ghost" href="mailto:sales@goldspireventures.com?subject=Veil%20Enterprise">Contact sales</a>
+      </div>
+    </section>
+
+    <section class="card card--flat">
+      <h2>Why this pricing makes sense</h2>
+      <ul class="trust-list">
+        <li><strong>vs. enterprise DLP suites</strong> ($15–40/user) — Veil deploys in minutes in the browser users already use; no network proxy or mail gateway required.</li>
+        <li><strong>vs. secure-email portals</strong> — Recipients stay in Gmail/Outlook; unlock is inline or via a lightweight page, not a separate webmail product.</li>
+        <li><strong>vs. password managers</strong> — Veil protects what people actually type in compose, with copilot and optional enforce-mode DLP.</li>
+        <li><strong>What you pay for on Team</strong> — org cloud, encrypted token storage, audit metadata, policy sync, and admin controls. Encryption still runs client-side.</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Included in every team trial</h2>
+      <ol class="steps">
+        <li>Create your org → get join code and admin dashboard.</li>
+        <li>Pick a <strong>policy pack</strong> matched to your industry (Finance, Healthcare, GDPR, or Engineering).</li>
+        <li>Members install Veil, join with work email, and copilot activates in mail compose.</li>
+        <li>Review metadata-only events in admin or forward to your SIEM.</li>
+      </ol>
+      <div class="btn-row">
+        <a class="btn" href="create.html">Start free team</a>
+        <a class="btn btn--ghost" href="index.html">See how Veil works</a>
+      </div>
+    </section>
+
+    <footer class="site-footer" data-portal-footer></footer>
+  </div>
+  <script src="portal/config.js"></script>
+  <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
+  <script>
+    GoldspirePortalNav.renderPortalNav('pricing');
+    GoldspirePortalNav.renderPortalFooter?.();
+  </script>
+</body>
+</html>

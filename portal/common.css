@@ -308,6 +308,11 @@ th { color: var(--muted); font-weight: 600; }
 
 .site-footer a { color: #f6d57a; }
 
+.price-card { display: flex; flex-direction: column; gap: 0.5rem; }
+.price-card--featured { border: 1px solid rgba(246, 213, 122, 0.45); box-shadow: 0 0 0 1px rgba(246, 213, 122, 0.12); }
+.price-card__amount { margin: 0; font-size: 2rem; font-weight: 700; color: var(--text); }
+.price-card__unit { font-size: 0.95rem; font-weight: 500; color: var(--muted); }
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

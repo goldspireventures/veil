@@ -6,6 +6,11 @@
 
   const DETECTORS = [
     ['iban', 'findIbans'],
+    ['routing_number', 'findRoutingNumbers'],
+    ['swift_bic', 'findSwiftBics'],
+    ['tax_id', 'findTaxIds'],
+    ['nhs_number', 'findNhsNumbers'],
+    ['date_of_birth', 'findDatesOfBirth'],
     ['ssn', 'findSsns'],
     ['bank_account', 'findBankAccounts'],
     ['national_id', 'findNationalIds'],

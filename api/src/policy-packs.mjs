@@ -4,7 +4,7 @@ export const POLICY_PACKS = Object.freeze({
   observational: {
     id: 'observational',
     label: 'Observational',
-    description: 'Copilot suggests actions; no automatic blocks.',
+    description: 'Copilot suggests actions; no automatic blocks. Good for rollout.',
     dlp: {
       version: 1,
       enabled: false,
@@ -16,7 +16,7 @@ export const POLICY_PACKS = Object.freeze({
   finance: {
     id: 'finance',
     label: 'Finance',
-    description: 'Block cards, bank details, tax IDs, and API keys.',
+    description: 'Block cards, IBANs, routing/SWIFT, tax IDs, and secrets in compose.',
     dlp: {
       version: 1,
       enabled: true,
@@ -25,6 +25,9 @@ export const POLICY_PACKS = Object.freeze({
         credit_card: { action: 'block', minSeverity: 'medium' },
         bank_account: { action: 'block', minSeverity: 'high' },
         iban: { action: 'block', minSeverity: 'high' },
+        routing_number: { action: 'block', minSeverity: 'high' },
+        swift_bic: { action: 'block', minSeverity: 'high' },
+        tax_id: { action: 'block', minSeverity: 'high' },
         ssn: { action: 'block', minSeverity: 'high' },
         national_id: { action: 'block', minSeverity: 'high' },
         api_key: { action: 'block', minSeverity: 'high' },
@@ -34,6 +37,8 @@ export const POLICY_PACKS = Object.freeze({
         defaultAction: 'block',
         categories: {
           credit_card: { action: 'block' },
+          iban: { action: 'block' },
+          tax_id: { action: 'block' },
           api_key: { action: 'block' },
           jwt: { action: 'block' },
         },
@@ -43,14 +48,16 @@ export const POLICY_PACKS = Object.freeze({
   healthcare: {
     id: 'healthcare',
     label: 'Healthcare',
-    description: 'Block MRNs, SSNs, and payment data.',
+    description: 'HIPAA-oriented: block MRNs, NHS numbers, SSNs, DOB, and payment data.',
     dlp: {
       version: 1,
       enabled: true,
       defaultAction: 'warn',
       categories: {
         medical_record_number: { action: 'block', minSeverity: 'high' },
+        nhs_number: { action: 'block', minSeverity: 'high' },
         ssn: { action: 'block', minSeverity: 'high' },
+        date_of_birth: { action: 'block', minSeverity: 'high' },
         credit_card: { action: 'block', minSeverity: 'high' },
         national_id: { action: 'block', minSeverity: 'high' },
         passport: { action: 'block', minSeverity: 'high' },
@@ -61,8 +68,41 @@ export const POLICY_PACKS = Object.freeze({
         defaultAction: 'block',
         categories: {
           medical_record_number: { action: 'block' },
+          nhs_number: { action: 'block' },
           ssn: { action: 'block' },
+          date_of_birth: { action: 'block' },
           credit_card: { action: 'block' },
+        },
+      },
+    },
+  },
+  gdpr: {
+    id: 'gdpr',
+    label: 'GDPR / EU privacy',
+    description: 'Warn or block personal and financial identifiers common in EU workflows.',
+    dlp: {
+      version: 1,
+      enabled: true,
+      defaultAction: 'warn',
+      categories: {
+        email: { action: 'warn', minSeverity: 'medium' },
+        phone: { action: 'warn', minSeverity: 'medium' },
+        national_id: { action: 'block', minSeverity: 'high' },
+        iban: { action: 'block', minSeverity: 'high' },
+        tax_id: { action: 'block', minSeverity: 'high' },
+        swift_bic: { action: 'block', minSeverity: 'high' },
+        date_of_birth: { action: 'block', minSeverity: 'high' },
+        passport: { action: 'block', minSeverity: 'high' },
+        api_key: { action: 'block', minSeverity: 'high' },
+      },
+      aiSurfaces: {
+        defaultAction: 'block',
+        categories: {
+          email: { action: 'warn' },
+          phone: { action: 'warn' },
+          iban: { action: 'block' },
+          national_id: { action: 'block' },
+          api_key: { action: 'block' },
         },
       },
     },

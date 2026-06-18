@@ -47,6 +47,7 @@
       <a href="create.html"${activePage === 'create' ? ' aria-current="page"' : ''}>Set up team</a>
       <a href="join.html"${activePage === 'join' ? ' aria-current="page"' : ''}>Join</a>
       <a href="install.html"${activePage === 'install' ? ' aria-current="page"' : ''}>Install</a>
+      <a href="pricing.html"${activePage === 'pricing' ? ' aria-current="page"' : ''}>Pricing</a>
       <a href="admin.html"${activePage === 'admin' ? ' aria-current="page"' : ''}>Admin</a>
     `;
   }

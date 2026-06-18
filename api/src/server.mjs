@@ -36,6 +36,7 @@ import {
   updateTeam,
   assignMemberTeam,
 } from './teams-service.mjs';
+import { handleStripeWebhook } from './stripe-service.mjs';
 
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 const publicDir = join(apiRoot, 'public');
@@ -90,17 +91,21 @@ function text(res, req, status, body, contentType = 'text/plain; charset=utf-8')
   res.end(body);
 }
 
-async function readBody(req) {
+async function readRawBody(req, maxBytes = 256 * 1024) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
-  if (chunks.length === 0) return {};
-  const MAX_BYTES = 256 * 1024;
-  const total = chunks.reduce((acc, c) => acc + c.length, 0);
-  if (total > MAX_BYTES) {
+  const body = Buffer.concat(chunks);
+  if (body.length > maxBytes) {
     throw httpError(413, 'Request body too large.');
   }
+  return body;
+}
+
+async function readBody(req) {
+  const body = await readRawBody(req);
+  if (body.length === 0) return {};
   try {
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return JSON.parse(body.toString('utf8'));
   } catch {
     throw httpError(400, 'Invalid JSON body.');
   }
@@ -139,6 +144,17 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && pathname === '/health') {
       json(res, req, 200, { ok: true, service: 'goldspire-secure-text-api' });
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/webhooks/stripe') {
+      const signature = req.headers['stripe-signature'];
+      if (!signature) {
+        throw httpError(400, 'Missing Stripe-Signature header.');
+      }
+      const rawBody = await readRawBody(req, 512 * 1024);
+      const result = await handleStripeWebhook(rawBody, signature, env);
+      json(res, req, 200, result);
       return;
     }
 

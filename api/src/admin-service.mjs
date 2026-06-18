@@ -3,6 +3,7 @@ import { getPool } from './db.mjs';
 import { httpError } from './org-service.mjs';
 import { normalizeEmail } from './auth.mjs';
 import { MEMBERSHIP_POLICIES } from './membership.mjs';
+import { getPolicyPack } from './policy-packs.mjs';
 
 const JOIN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -36,6 +37,15 @@ function slugifyOrgId(displayName) {
 }
 
 function defaultSettings(overrides = {}) {
+  const rolloutPack = getPolicyPack('observational');
+  const rolloutDlp = rolloutPack?.dlp || {
+    version: 1,
+    enabled: false,
+    defaultAction: 'warn',
+    categories: {},
+    aiSurfaces: { defaultAction: 'block', categories: {} },
+  };
+
   return {
     passphraseFromVault: false,
     useSavedPassphrase: true,
@@ -43,16 +53,11 @@ function defaultSettings(overrides = {}) {
     enforceStrongPassphrase: true,
     membershipPolicy: 'invite',
     allowedEmailDomains: [],
-    dlp: {
-      version: 1,
-      enabled: false,
-      defaultAction: 'warn',
-      categories: {},
-      aiSurfaces: { defaultAction: 'block', categories: {} },
-    },
+    policyPackId: 'observational',
+    dlp: rolloutDlp,
     copilotEnabled: true,
     productAnalytics: true,
-    selectionUiMode: 'quiet',
+    selectionUiMode: 'smart',
     ...overrides,
   };
 }

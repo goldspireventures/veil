@@ -115,6 +115,7 @@ for (const page of [
   'admin.html',
   'join.html',
   'install.html',
+  'pricing.html',
   'privacy.html',
   'terms.html',
 ]) {

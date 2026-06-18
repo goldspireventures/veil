@@ -32,8 +32,8 @@
     orgTeamId: '',
     orgTeamName: '',
     teamDlpPolicy: null,
-    /** Veil copilot — off by default until Sprint 2+. */
-    copilotEnabled: false,
+    /** Veil copilot — on by default; personal setup and org sync can override. */
+    copilotEnabled: true,
     /** DLP mode: off | observe | enforce */
     dlpMode: 'off',
     /** Org-synced DLP policy (organizations.settings.dlp) */
