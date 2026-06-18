@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Set up your team — Goldspire Secure Text</title>
+  <title>Set up your team — Veil by Goldspire</title>
   <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
@@ -67,8 +67,22 @@
       <div class="btn-row">
         <button type="button" class="btn" id="open-admin">Open admin</button>
         <a class="btn btn--ghost" href="join.html">Member join page</a>
+        <a class="btn btn--ghost" href="install.html">Install guide</a>
       </div>
+
+      <div class="invite-box">
+        <strong>Invite email for your team</strong>
+        <p class="hint">Copy and send to members. Replace placeholders as needed.</p>
+        <textarea id="invite-template" readonly></textarea>
+        <div class="btn-row">
+          <button type="button" class="btn btn--sm" id="copy-invite">Copy invite email</button>
+        </div>
+      </div>
+
+      <div id="success-status" class="status" role="status"></div>
     </div>
+
+    <footer class="site-footer" data-portal-footer></footer>
   </div>
 
   <script src="portal/config.js"></script>
@@ -76,6 +90,7 @@
   <script src="portal/nav.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('create');
+    GoldspirePortalNav.renderPortalFooter?.();
     if (GoldspirePortalApp.loadAdminSession()?.adminToken) {
       window.location.replace('admin.html');
     }
@@ -86,6 +101,7 @@
     const submitBtn = document.getElementById('submit-btn');
     const formCard = document.getElementById('form-card');
     const successCard = document.getElementById('success-card');
+    const successStatus = document.getElementById('success-status');
 
     document.getElementById('generate-passphrase').addEventListener('click', () => {
       document.getElementById('team-passphrase').value = app.generatePassphrase(24);
@@ -114,6 +130,22 @@
         document.getElementById('out-join-code').textContent = result.joinCode;
         document.getElementById('out-admin-token').textContent = result.adminToken;
 
+        const joinUrl = `${app.portalOrigin() || location.origin}${location.pathname.replace(/[^/]+$/, '')}join.html`;
+        const installUrl = `${app.portalOrigin() || location.origin}${location.pathname.replace(/[^/]+$/, '')}install.html`;
+        document.getElementById('invite-template').value =
+`Subject: You're invited to Veil — secure email at ${result.displayName}
+
+Hi,
+
+Your team is using Veil by Goldspire to protect sensitive text in email before it's sent.
+
+1. Install Veil: ${installUrl}
+2. Open the extension → Team → join code: ${result.joinCode}
+3. Use your work email when joining.
+4. Your admin will share the team passphrase separately (use your password manager).
+
+Questions? Reply to this email or contact your IT admin.`;
+
         app.saveAdminSession({
           orgId: result.orgId,
           displayName: result.displayName,
@@ -123,7 +155,7 @@
         GoldspirePortalNav.renderPortalNav('create');
         formCard.classList.add('hidden');
         successCard.classList.remove('hidden');
-        app.setStatus(statusEl, '');
+        app.setStatus(successStatus, '');
       } catch (error) {
         app.setStatus(statusEl, error.message || 'Could not create your team.', 'error');
       } finally {
@@ -133,6 +165,16 @@
 
     document.getElementById('open-admin').addEventListener('click', () => {
       window.location.href = 'admin.html';
+    });
+
+    document.getElementById('copy-invite').addEventListener('click', async () => {
+      const text = document.getElementById('invite-template').value;
+      try {
+        await app.copyText(text);
+        app.setStatus(successStatus, 'Invite email copied.', 'ok');
+      } catch {
+        app.setStatus(successStatus, 'Could not copy — select the text manually.', 'error');
+      }
     });
   </script>
 </body>

@@ -170,6 +170,123 @@ th { color: var(--muted); font-weight: 600; }
 
 .hidden { display: none !important; }
 
+.layout--wide { max-width: 960px; }
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand__mark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #d4a017, #f0c14b);
+  color: #111827;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.brand__name {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.brand__byline {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.nav--header { margin-bottom: 0; }
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #93c5fd;
+}
+
+.hero h1 {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  margin: 0 0 0.75rem;
+  line-height: 1.2;
+}
+
+.hero__lede { font-size: 1rem; max-width: 52ch; }
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.card--flat {
+  box-shadow: none;
+  background: rgba(23, 29, 38, 0.85);
+}
+
+.steps {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--muted);
+}
+
+.steps li { margin-bottom: 0.5rem; }
+
+.steps strong { color: var(--text); }
+
+.trust-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+  color: var(--muted);
+}
+
+.trust-list li { margin-bottom: 0.35rem; }
+
+.site-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.site-footer a { color: #93c5fd; }
+
+.invite-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px dashed #3a4658;
+  background: #11161d;
+}
+
+.invite-box textarea {
+  min-height: 140px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
 @media (max-width: 600px) {
   .btn-row { flex-direction: column; }
   .btn { width: 100%; }

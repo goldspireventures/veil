@@ -9,10 +9,13 @@ Portal pages (static, repo root):
 
 | Page | URL |
 |------|-----|
-| Home | `/index.html` |
+| Landing | `/index.html` |
 | Create organization | `/create.html` |
 | Member join | `/join.html` |
 | Admin console | `/admin.html` |
+| Install guide | `/install.html` |
+| Privacy | `/privacy.html` |
+| Terms | `/terms.html` |
 
 Run `npm run env:apply` before deploy so `portal/config.js` and `extension/src/constants.js` match your `.env`.
 

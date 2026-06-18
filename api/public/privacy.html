@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy policy — Veil by Goldspire</title>
+  <link rel="stylesheet" href="portal/common.css" />
+</head>
+<body>
+  <div class="layout">
+    <nav class="nav" data-portal-nav></nav>
+
+    <div class="card">
+      <h1>Privacy policy</h1>
+      <p class="lede">Veil by Goldspire · Last updated June 2026</p>
+
+      <h2>What Veil does</h2>
+      <p>Veil is a browser extension that encrypts sensitive text on web pages before you send or submit it. Encryption and decryption happen on your device.</p>
+
+      <h2>What we collect</h2>
+      <ul>
+        <li><strong>Organization accounts:</strong> team name, work email, device identifier, join timestamps, and public key material for team sharing.</li>
+        <li><strong>Secure tokens:</strong> encrypted ciphertext blobs and metadata (category, expiry, read counts). We cannot decrypt these.</li>
+        <li><strong>Security events (optional):</strong> detection category, severity, host domain, and action taken — never the matched secret text.</li>
+      </ul>
+
+      <h2>What we do not collect</h2>
+      <ul>
+        <li>Plaintext secrets you secure or unlock.</li>
+        <li>Your team passphrase (except when you choose to store it locally in the extension).</li>
+        <li>Full page content or email bodies.</li>
+      </ul>
+
+      <h2>Where data is stored</h2>
+      <p>Extension settings and passphrases are stored in your browser’s sync/local storage, encrypted on device where applicable. Cloud org data is hosted on infrastructure operated by Goldspire Ventures.</p>
+
+      <h2>Your choices</h2>
+      <p>You can disconnect from an organization, uninstall the extension, or request org deletion by contacting your administrator or <a href="mailto:privacy@goldspireventures.com">privacy@goldspireventures.com</a>.</p>
+
+      <h2>Contact</h2>
+      <p>Goldspire Ventures · privacy@goldspireventures.com</p>
+    </div>
+
+    <footer class="site-footer" data-portal-footer></footer>
+  </div>
+  <script src="portal/config.js"></script>
+  <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
+  <script>
+    GoldspirePortalNav.renderPortalNav('privacy');
+    GoldspirePortalNav.renderPortalFooter?.();
+  </script>
+</body>
+</html>

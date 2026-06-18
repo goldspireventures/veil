@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Install Veil — Goldspire</title>
+  <link rel="stylesheet" href="portal/common.css" />
+</head>
+<body>
+  <div class="layout">
+    <nav class="nav" data-portal-nav></nav>
+
+    <div class="card">
+      <h1>Install Veil</h1>
+      <p class="lede">Browser extension for Chrome and Microsoft Edge.</p>
+
+      <h2>For team members</h2>
+      <ol class="steps">
+        <li>Install Veil from your organization’s software catalog, Chrome Web Store, or Edge Add-ons (link from your admin).</li>
+        <li>Open the Veil popup → choose <strong>Team</strong> → enter your join code and work email.</li>
+        <li>Save your team passphrase when prompted.</li>
+        <li>Refresh Outlook or Gmail, then paste or highlight a secret to see Veil copilot.</li>
+      </ol>
+      <div class="btn-row">
+        <a class="btn" href="join.html">Join with a code</a>
+      </div>
+
+      <h2>For IT administrators</h2>
+      <p>Deploy via <strong>Chrome / Edge managed policy</strong> with extension ID and team JSON policy. Members skip manual join when <code>setupComplete</code> and <code>teamPassphrase</code> are pushed.</p>
+      <p class="hint">See the extension docs: <code>extension/docs/ENTERPRISE.md</code> in the Veil repository.</p>
+
+      <h2>Developer / pilot install</h2>
+      <ol class="steps">
+        <li>Run <code>npm run package</code> in the Veil repository.</li>
+        <li>Chrome or Edge → Extensions → Developer mode → <strong>Load unpacked</strong> → select <code>extension/dist</code>.</li>
+        <li>Reload the extension after each update.</li>
+      </ol>
+
+      <h2>Supported browsers</h2>
+      <p>Chrome 128+, Microsoft Edge 128+, and Firefox 128+ (with Gecko extension ID configured).</p>
+      <p class="hint">Each browser profile keeps its own extension login. Join your team separately in Edge and Chrome if you use both.</p>
+    </div>
+
+    <footer class="site-footer" data-portal-footer></footer>
+  </div>
+  <script src="portal/config.js"></script>
+  <script src="portal/app.js"></script>
+  <script src="portal/nav.js"></script>
+  <script>
+    GoldspirePortalNav.renderPortalNav('install');
+    GoldspirePortalNav.renderPortalFooter?.();
+  </script>
+</body>
+</html>

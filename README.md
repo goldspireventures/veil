@@ -1,8 +1,8 @@
-# Goldspire Secure Text
+# Veil by Goldspire
 
-Browser extension + hosted unlock page for **[redacted]** inline secrets in email, Jira, forms, and anywhere on the web.
+Browser extension + cloud org API for securing sensitive text in email, forms, and web apps — before you send.
 
-**New machine?** → **[SETUP.md](SETUP.md)** (clone, `.env`, PowerShell/npm workaround, load extension, cloud API).
+**New machine?** → **[SETUP.md](SETUP.md)** · **Pilot QA** → **[docs/MANUAL_TEST.md](docs/MANUAL_TEST.md)** · **Launch** → **[docs/MARKET_READY.md](docs/MARKET_READY.md)**
 
 ## Repository layout
 
@@ -49,4 +49,12 @@ Packages `extension/dist/` and copies the unlock bundle to this repo root. Commi
 
 ## Docs
 
-See [`extension/docs/`](extension/docs/) for enterprise deployment, org provisioning, and security.
+| Doc | Audience |
+|-----|----------|
+| [docs/ADMIN_GUIDE.md](docs/ADMIN_GUIDE.md) | IT / team admins |
+| [docs/MEMBER_GUIDE.md](docs/MEMBER_GUIDE.md) | End users |
+| [docs/MARKET_READY.md](docs/MARKET_READY.md) | Launch checklist |
+| [docs/STORE_LISTING.md](docs/STORE_LISTING.md) | Chrome / Edge store copy |
+| [extension/docs/](extension/docs/) | Enterprise, threat model, deployment |
+
+Portal pages (create / join / admin / privacy / terms): repo root `index.html` and siblings, synced to `api/public` via `npm run env:apply`.

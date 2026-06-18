@@ -75,6 +75,22 @@ test('isVeilToken matches placeholder selection', () => {
   assert.equal(g.GoldspireVeilTokenFormat.isVeilToken('hello'), false);
 });
 
+test('padPlaceholder adds spacing around token text', () => {
+  const g = {};
+  vm.runInNewContext(readFileSync(join(root, 'extension/src/tokens/format.js'), 'utf8'), { globalThis: g });
+  const ph = '[veil:vt_abc]';
+  assert.equal(g.GoldspireVeilTokenFormat.padPlaceholder(ph, 'x', 'y'), ` ${ph} `);
+  assert.equal(g.GoldspireVeilTokenFormat.padPlaceholder(ph, ' ', 'y'), `${ph} `);
+  assert.equal(g.GoldspireVeilTokenFormat.padPlaceholder(ph, 'x', ' '), ` ${ph}`);
+  assert.equal(
+    g.GoldspireVeilTokenFormat.padPlaceholderForRequest(ph, {
+      fieldState: { text: 'hellosecretworld' },
+      match: { raw: 'secret', start: 5 },
+    }),
+    ` ${ph} `,
+  );
+});
+
 test('tokenize action requires org when tokens unavailable', async () => {
   const g = {
     GoldspireSettings: {

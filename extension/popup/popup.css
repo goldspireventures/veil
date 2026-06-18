@@ -522,6 +522,52 @@ body {
   line-height: 1.4;
 }
 
+.card--readiness {
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.readiness__title {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+
+.readiness__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.readiness__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #c5cad6;
+}
+
+.readiness__item--ok {
+  color: #d1fae5;
+}
+
+.readiness__icon {
+  width: 18px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.card--settings-feature {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .selection-tip kbd {
   font: inherit;
   padding: 1px 4px;

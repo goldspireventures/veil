@@ -96,7 +96,15 @@ mkdirSync(join(apiPublicDir, 'portal'), { recursive: true });
 for (const file of ['common.css', 'app.js', 'config.js', 'nav.js']) {
   cpSync(join(repoRoot, 'portal', file), join(apiPublicDir, 'portal', file), { force: true });
 }
-for (const page of ['index.html', 'create.html', 'admin.html', 'join.html']) {
+for (const page of [
+  'index.html',
+  'create.html',
+  'admin.html',
+  'join.html',
+  'install.html',
+  'privacy.html',
+  'terms.html',
+]) {
   cpSync(join(repoRoot, page), join(apiPublicDir, page), { force: true });
 }
 

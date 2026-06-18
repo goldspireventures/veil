@@ -44,14 +44,28 @@
 
     nav.innerHTML = `
       <a href="index.html"${activePage === 'index' ? ' aria-current="page"' : ''}>Home</a>
-      <a href="create.html"${activePage === 'create' ? ' aria-current="page"' : ''}>Set up your team</a>
-      <a href="join.html"${activePage === 'join' ? ' aria-current="page"' : ''}>Join a team</a>
-      <a href="admin.html"${activePage === 'admin' ? ' aria-current="page"' : ''}>Admin sign in</a>
+      <a href="create.html"${activePage === 'create' ? ' aria-current="page"' : ''}>Set up team</a>
+      <a href="join.html"${activePage === 'join' ? ' aria-current="page"' : ''}>Join</a>
+      <a href="install.html"${activePage === 'install' ? ' aria-current="page"' : ''}>Install</a>
+      <a href="admin.html"${activePage === 'admin' ? ' aria-current="page"' : ''}>Admin</a>
+    `;
+  }
+
+  function renderPortalFooter() {
+    const footer = document.querySelector('[data-portal-footer]');
+    if (!footer) return;
+    footer.innerHTML = `
+      <span>Veil by Goldspire</span>
+      <a href="privacy.html">Privacy</a>
+      <a href="terms.html">Terms</a>
+      <a href="install.html">Install</a>
+      <a href="mailto:support@goldspireventures.com">Support</a>
     `;
   }
 
   global.GoldspirePortalNav = {
     renderPortalNav,
+    renderPortalFooter,
     membershipSummary,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -7,7 +7,52 @@
     document.getElementById(BANNER_ID)?.remove();
   }
 
-  function showBanner({ seconds, onKeepUnlocked, onResecureNow }) {
+  function detachOutsideDismiss(session) {
+    if (!session?.outsideClickHandler) return;
+    document.removeEventListener('click', session.outsideClickHandler, true);
+    session.outsideClickHandler = null;
+  }
+
+  function cancelSession(id) {
+    const session = sessions.get(id);
+    if (!session) return;
+    window.clearInterval(session.intervalId);
+    window.clearTimeout(session.timeoutId);
+    detachOutsideDismiss(session);
+    sessions.delete(id);
+    if (sessions.size === 0) removeBanner();
+  }
+
+  function cancelAllSessions() {
+    for (const id of [...sessions.keys()]) {
+      cancelSession(id);
+    }
+    removeBanner();
+  }
+
+  function dismissBanner(sessionId, callback) {
+    cancelSession(sessionId);
+    removeBanner();
+    callback?.();
+  }
+
+  function attachOutsideDismiss(banner, sessionId, onDismiss) {
+    const session = sessions.get(sessionId);
+    if (!session) return;
+
+    const handler = (event) => {
+      if (banner.contains(event.target)) return;
+      dismissBanner(sessionId, onDismiss);
+    };
+
+    session.outsideClickHandler = handler;
+    window.setTimeout(() => {
+      if (!sessions.has(sessionId)) return;
+      document.addEventListener('click', handler, true);
+    }, 0);
+  }
+
+  function showBanner({ sessionId, seconds, onKeepUnlocked, onResecureNow }) {
     removeBanner();
 
     const banner = document.createElement('div');
@@ -25,21 +70,18 @@
     `;
 
     banner.addEventListener('click', (event) => {
-      if (event.target.closest('[data-action="keep"]')) onKeepUnlocked();
-      if (event.target.closest('[data-action="now"]')) onResecureNow();
+      event.stopPropagation();
+      if (event.target.closest('[data-action="keep"]')) {
+        dismissBanner(sessionId, onKeepUnlocked);
+      }
+      if (event.target.closest('[data-action="now"]')) {
+        dismissBanner(sessionId, onResecureNow);
+      }
     });
 
     document.documentElement.appendChild(banner);
+    attachOutsideDismiss(banner, sessionId, onKeepUnlocked);
     return banner.querySelector('[data-countdown]');
-  }
-
-  function cancelSession(id) {
-    const session = sessions.get(id);
-    if (!session) return;
-    window.clearInterval(session.intervalId);
-    window.clearTimeout(session.timeoutId);
-    sessions.delete(id);
-    if (sessions.size === 0) removeBanner();
   }
 
   async function buildRedacted(marker, plaintext, secret, profile, unlockBaseUrl) {
@@ -67,19 +109,21 @@
     onResecured,
     onKeptOpen,
   }) {
+    cancelAllSessions();
     const id = `gst-session-${++sessionCounter}`;
     let remaining = Math.max(5, delaySeconds);
 
+    sessions.set(id, { intervalId: null, timeoutId: null });
+
     const countdownEl = showBanner({
+      sessionId: id,
       seconds: remaining,
       onKeepUnlocked: () => {
-        cancelSession(id);
         GoldspireSecrets.clearMemoryString(secret);
         onKeptOpen?.();
         GoldspireSecureUI.showToast('Secret stays visible.', 'info');
       },
       onResecureNow: async () => {
-        cancelSession(id);
         await performResecure();
       },
     });
@@ -125,17 +169,61 @@
     }
 
     const timeoutId = window.setTimeout(async () => {
-      cancelSession(id);
+      dismissBanner(id);
       await performResecure();
     }, remaining * 1000);
 
-    sessions.set(id, { intervalId, timeoutId });
+    const session = sessions.get(id);
+    if (session) {
+      session.intervalId = intervalId;
+      session.timeoutId = timeoutId;
+    }
+    return id;
+  }
+
+  function scheduleVeilTokenRelock({ tokenId, placeholder, delaySeconds, onRelock, onKeptOpen }) {
+    cancelAllSessions();
+    const id = `gst-veil-session-${++sessionCounter}`;
+    let remaining = Math.max(5, delaySeconds);
+
+    sessions.set(id, { intervalId: null, timeoutId: null });
+
+    const countdownEl = showBanner({
+      sessionId: id,
+      seconds: remaining,
+      onKeepUnlocked: () => {
+        onKeptOpen?.();
+        GoldspireSecureUI.showToast('Token stays visible.', 'info');
+      },
+      onResecureNow: async () => {
+        await onRelock?.();
+      },
+    });
+
+    const intervalId = window.setInterval(() => {
+      remaining -= 1;
+      if (countdownEl) countdownEl.textContent = `Re-locking in ${remaining}s`;
+      if (remaining <= 0) window.clearInterval(intervalId);
+    }, 1000);
+
+    const timeoutId = window.setTimeout(async () => {
+      dismissBanner(id);
+      await onRelock?.();
+    }, remaining * 1000);
+
+    const session = sessions.get(id);
+    if (session) {
+      session.intervalId = intervalId;
+      session.timeoutId = timeoutId;
+    }
     return id;
   }
 
   global.GoldspireResecure = {
     scheduleResecure,
+    scheduleVeilTokenRelock,
     cancelSession,
+    cancelAllSessions,
     removeBanner,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : window);

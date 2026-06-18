@@ -19,6 +19,7 @@ const PROFILE_DEFAULTS = {
     enforceStrongPassphrase: true,
     resecureDelaySeconds: 45,
     defaultSecureMode: 'team',
+    copilotEnabled: true,
   },
 };
 
@@ -280,6 +281,81 @@ function showMain(profile) {
   viewSetup.hidden = true;
   viewMain.hidden = false;
   applyProfileChrome(profile);
+  refreshReadinessChecklist().catch(() => {});
+}
+
+async function refreshReadinessChecklist() {
+  const card = document.getElementById('readiness-card');
+  const list = document.getElementById('readiness-list');
+  const hint = document.getElementById('readiness-hint');
+  const enableBtn = document.getElementById('readiness-enable-copilot');
+  if (!card || !list) return;
+
+  const settings = await readSyncSettings();
+  const profile = settings.securityProfile || 'personal';
+  const isOrg = profile === 'organization';
+
+  const items = [];
+
+  if (isOrg) {
+    const connected = Boolean(settings.orgId && settings.orgProvisionSource === 'cloud');
+    items.push({
+      ok: connected,
+      label: connected ? `Connected to ${settings.orgDisplayName || 'your team'}` : 'Join your team',
+    });
+  } else {
+    items.push({
+      ok: Boolean(settings.setupComplete),
+      label: 'Personal setup complete',
+    });
+  }
+
+  let passphraseReady = false;
+  if (isOrg) {
+    passphraseReady = settings.passphraseFromVault
+      || managedState.hasTeamPassphrase
+      || hasStoredOrgPassphrase
+      || Boolean((await GoldspireSecrets.loadPassphrase?.('organization'))?.trim());
+  } else {
+    passphraseReady = hasStoredPassphrase || Boolean((await GoldspireSecrets.loadPassphrase?.('personal'))?.trim());
+  }
+  items.push({
+    ok: passphraseReady,
+    label: isOrg ? 'Team passphrase saved' : 'Passphrase saved',
+  });
+
+  const copilotOn = settings.copilotEnabled === true;
+  items.push({
+    ok: copilotOn,
+    label: 'Veil copilot enabled',
+  });
+
+  list.innerHTML = items.map((item) => `
+    <li class="readiness__item${item.ok ? ' readiness__item--ok' : ''}">
+      <span class="readiness__icon" aria-hidden="true">${item.ok ? '✓' : '○'}</span>
+      <span>${item.label}</span>
+    </li>
+  `).join('');
+
+  const allOk = items.every((item) => item.ok);
+  card.hidden = allOk;
+
+  if (hint) {
+    hint.textContent = allOk
+      ? ''
+      : 'After saving settings, refresh your mail tab (F5) so Veil picks up changes.';
+  }
+
+  if (enableBtn) {
+    enableBtn.hidden = copilotOn;
+    enableBtn.onclick = async () => {
+      const copilotEl = document.getElementById('copilotEnabled');
+      if (copilotEl) copilotEl.checked = true;
+      await writeSyncSettings({ ...await readSyncSettings(), copilotEnabled: true });
+      showStatus('Copilot enabled — refresh your mail tab.');
+      await refreshReadinessChecklist();
+    };
+  }
 }
 
 function applyProfileChrome(profile) {
@@ -432,8 +508,8 @@ async function completeOrgMembership({ joinCode, email }) {
   }
 
   const joined = await readSyncSettings();
-  await finishSetup('organization', { orgMemberEmail: email });
-  showStatus(`Connected to ${joined.orgDisplayName || 'your team'}.`);
+  await finishSetup('organization', { orgMemberEmail: email, copilotEnabled: true });
+  showStatus(`Connected to ${joined.orgDisplayName || 'your team'}. Refresh your mail tab to use copilot.`);
 }
 
 function showPendingOrgSetup(settings = {}) {
@@ -552,6 +628,7 @@ async function loadSettings() {
     applySettingsToForm(settings);
   applyProvisionChrome(settings);
   applyManagedChrome(settings);
+    await refreshReadinessChecklist();
     return;
   }
 
@@ -604,6 +681,7 @@ async function loadSettings() {
   refreshPassphraseStrength();
   applyProvisionChrome(settings);
   applyManagedChrome(settings);
+  await refreshReadinessChecklist();
 }
 
 form?.addEventListener('submit', async (event) => {
@@ -689,6 +767,7 @@ form?.addEventListener('submit', async (event) => {
     }
     refreshPassphraseStrength();
     showStatus('Settings saved.');
+    await refreshReadinessChecklist();
   } catch (error) {
     showStatus(error?.message || 'Could not save settings.');
   } finally {
@@ -952,4 +1031,10 @@ if (api.storage?.onChanged) {
 }
 
 loadSettings().catch(() => showStatus('Could not load settings.'));
+
+const helpPortalLink = document.getElementById('help-portal-link');
+if (helpPortalLink && typeof GoldspireConstants !== 'undefined') {
+  const portal = GoldspireConstants.ORG_PORTAL_URL || '';
+  helpPortalLink.href = portal.replace(/join\.html.*$/i, 'index.html') || 'https://join-secure-text.goldspireventures.com/index.html';
+}
 refreshSelectionPreview();

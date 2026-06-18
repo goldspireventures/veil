@@ -3,39 +3,89 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Goldspire Secure Text</title>
+  <meta name="description" content="Veil by Goldspire — secure sensitive text in email and web apps before you send. Client-side encryption for teams." />
+  <title>Veil — secure text before you send</title>
   <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
-  <div class="layout">
-    <nav class="nav" data-portal-nav></nav>
+  <div class="layout layout--wide">
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand__mark" aria-hidden="true">V</span>
+        <div>
+          <strong class="brand__name">Veil</strong>
+          <span class="brand__byline">by Goldspire</span>
+        </div>
+      </div>
+      <nav class="nav nav--header" data-portal-nav></nav>
+    </header>
 
-    <div class="card">
-      <h1>Goldspire Secure Text</h1>
-      <p class="lede">Redact sensitive text in email and web apps before you send. Set up your team, invite colleagues, and manage access from one place.</p>
-
+    <section class="hero card">
+      <p class="eyebrow">Browser security for email &amp; web</p>
+      <h1>Secure sensitive text before you hit send</h1>
+      <p class="lede hero__lede">
+        Veil turns secrets into <code>[redacted]</code> or team tokens inline — encrypted in the browser.
+        Recipients unlock on the same page. Your server never sees plaintext.
+      </p>
       <div class="btn-row">
         <a class="btn" href="create.html" data-nav-create>Set up your team</a>
         <a class="btn btn--ghost" href="join.html">Join a team</a>
-        <a class="btn btn--ghost" href="admin.html" data-nav-admin>Admin sign in</a>
+        <a class="btn btn--ghost" href="install.html">Install extension</a>
       </div>
+    </section>
 
-      <p class="hint" style="margin-top: 1.25rem;">Team members install the browser extension and join with the code you share.</p>
-    </div>
+    <section class="grid-3">
+      <div class="card card--flat">
+        <h2>Encrypt in place</h2>
+        <p>Highlight or paste an API key, card number, or password. Veil replaces it with <code>[redacted]</code> — teammates click to unlock.</p>
+      </div>
+      <div class="card card--flat">
+        <h2>Tokenize for email</h2>
+        <p>Share <code>[veil:vt_…]</code> placeholders across Outlook, Gmail, and other clients. One click reveals for anyone in your org.</p>
+      </div>
+      <div class="card card--flat">
+        <h2>Copilot on paste</h2>
+        <p>Veil detects sensitive data as you compose and offers Encrypt, Mask, or Tokenize before mistakes leave the browser.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>How teams get started</h2>
+      <ol class="steps">
+        <li><strong>Admin</strong> creates a team → receives a join code and admin key.</li>
+        <li><strong>Members</strong> install the Veil extension and join with work email.</li>
+        <li><strong>Everyone</strong> pastes or highlights secrets in Outlook / Gmail → secures inline → sends as normal.</li>
+      </ol>
+      <p class="hint">IT can push the extension and team passphrase via Chrome or Edge policy — no manual join required.</p>
+    </section>
+
+    <section class="trust card card--flat">
+      <h2>Security &amp; privacy</h2>
+      <ul class="trust-list">
+        <li>Encryption runs locally in the browser (AES-GCM + PBKDF2).</li>
+        <li>Veil’s cloud API stores org membership and token ciphertext — not your secrets or passphrases.</li>
+        <li>Security events log metadata only (no matched content).</li>
+      </ul>
+      <div class="btn-row">
+        <a class="btn btn--ghost btn--sm" href="privacy.html">Privacy policy</a>
+        <a class="btn btn--ghost btn--sm" href="terms.html">Terms of use</a>
+      </div>
+    </section>
+
+    <footer class="site-footer" data-portal-footer></footer>
   </div>
   <script src="portal/config.js"></script>
   <script src="portal/app.js"></script>
   <script src="portal/nav.js"></script>
-  <script>GoldspirePortalNav.renderPortalNav('index');
+  <script>
+    GoldspirePortalNav.renderPortalNav('index');
+    GoldspirePortalNav.renderPortalFooter?.();
     (function () {
       const session = GoldspirePortalApp.loadAdminSession?.();
       if (!session?.adminToken) return;
       document.querySelector('[data-nav-create]')?.remove();
-      const admin = document.querySelector('[data-nav-admin]');
-      if (admin) {
-        admin.textContent = 'Manage team';
-        admin.classList.remove('btn--ghost');
-      }
+      const admin = document.querySelector('.nav--header a[href="admin.html"]');
+      if (admin) admin.textContent = 'Manage team';
     })();
   </script>
 </body>

@@ -390,6 +390,9 @@ const server = createServer(async (req, res) => {
       '/create.html': 'create.html',
       '/admin.html': 'admin.html',
       '/join.html': 'join.html',
+      '/install.html': 'install.html',
+      '/privacy.html': 'privacy.html',
+      '/terms.html': 'terms.html',
     };
     if (req.method === 'GET' && portalPages[pathname]) {
       if (serveStatic(portalPages[pathname], res)) return;

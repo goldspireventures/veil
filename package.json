@@ -7,6 +7,7 @@
   "scripts": {
     "env:apply": "node scripts/apply-env.mjs",
     "package": "npm run env:apply && node extension/scripts/package.mjs && node scripts/deploy-pages.mjs",
+    "package:store": "npm run package && node scripts/package-store.mjs",
     "build": "npm run package",
     "start": "node api/src/server.mjs",
     "db:migrate": "node api/scripts/migrate.mjs",

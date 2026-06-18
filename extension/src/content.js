@@ -530,12 +530,22 @@
 
       const placeholder = globalThis.GoldspireVeilTokenFormat?.formatPlaceholder?.(tokenId) || `[veil:${tokenId}]`;
 
-      if (options.replaceNode?.isConnected) {
-        const textNode = document.createTextNode(result.plaintext);
-        options.replaceNode.replaceWith(textNode);
-      } else if (options.context) {
-        replaceVeilPlaceholder(options.context, placeholder, result.plaintext);
-      }
+      globalThis.GoldspireVeilTokenReveal?.revealEverywhere?.(
+        tokenId,
+        result.plaintext,
+        placeholder,
+      );
+
+      maybeScheduleVeilTokenRelock({
+        settings,
+        tokenId,
+        placeholder,
+        onRelock: () => globalThis.GoldspireVeilTokenReveal?.relockEverywhere?.(
+          tokenId,
+          placeholder,
+          (id) => runSafe(resolveVeilTokenId(id, { copyResult: false })),
+        ),
+      });
 
       if (options.copyResult !== false) {
         GoldspireSecureUI.showResultDialog({
@@ -1011,6 +1021,25 @@
         forEmail: GoldspireRedacted.isEmailCompose(),
       }),
       onResecured: () => detectorController?.scheduleScan(),
+    });
+  }
+
+  function maybeScheduleVeilTokenRelock({ settings, tokenId, placeholder, onRelock }) {
+    if (!settings.resecureAfterUnlock || !tokenId) return;
+    const profile = getProfile(settings);
+    const delaySeconds = Number(settings.resecureDelaySeconds) || (profile === 'organization' ? 45 : 60);
+
+    GoldspireResecure.scheduleVeilTokenRelock({
+      tokenId,
+      placeholder,
+      delaySeconds,
+      onRelock: async () => {
+        const count = onRelock?.() || 0;
+        if (count > 0) {
+          GoldspireSecureUI.showToast('Veil token re-locked.', 'success');
+        }
+        veilTokenDetector?.scheduleScan?.();
+      },
     });
   }
 
@@ -1790,8 +1819,8 @@
     })());
   });
 
-  veilTokenDetector = GoldspireVeilTokenDetector?.initVeilTokenDetector?.(getSettings, (tokenId, node) => {
-    runSafe(resolveVeilTokenId(tokenId, { replaceNode: node, copyResult: false }));
+  veilTokenDetector = GoldspireVeilTokenDetector?.initVeilTokenDetector?.(getSettings, (tokenId) => {
+    runSafe(resolveVeilTokenId(tokenId, { copyResult: false }));
   });
 
   GoldspirePasteObserve?.initPasteObserve?.({

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Team admin — Goldspire Secure Text</title>
+  <title>Team admin — Veil by Goldspire</title>
   <link rel="stylesheet" href="portal/common.css" />
 </head>
 <body>
@@ -178,6 +178,8 @@
         </table>
       </div>
     </div>
+
+    <footer class="site-footer" data-portal-footer></footer>
   </div>
 
   <script src="portal/config.js"></script>
@@ -185,6 +187,7 @@
   <script src="portal/nav.js"></script>
   <script>
     GoldspirePortalNav.renderPortalNav('admin');
+    GoldspirePortalNav.renderPortalFooter?.();
 
     const app = GoldspirePortalApp;
     const loginCard = document.getElementById('login-card');

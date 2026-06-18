@@ -136,13 +136,18 @@
         return created || { ok: false, error: 'tokenize_failed' };
       }
 
+      const spaced = global.GoldspireVeilTokenFormat?.padPlaceholderForRequest?.(
+        created.placeholder,
+        request,
+      ) || created.placeholder;
+
       if (request.selectionContext && deps?.replaceSelection) {
-        deps.replaceSelection(request.selectionContext, created.placeholder);
+        deps.replaceSelection(request.selectionContext, spaced);
       } else if (request.fieldState && request.match?.raw) {
         global.GoldspirePasteInsert?.replaceFieldMatch?.(
           request.fieldState,
           request.match.raw,
-          created.placeholder,
+          spaced,
         );
       }
 

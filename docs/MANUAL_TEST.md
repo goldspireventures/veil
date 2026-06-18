@@ -2,39 +2,34 @@
 
 Use this after `npm run package` and loading **`extension/dist`** in the browser.
 
+See also: [MEMBER_GUIDE.md](MEMBER_GUIDE.md) · [ADMIN_GUIDE.md](ADMIN_GUIDE.md) · [MARKET_READY.md](MARKET_READY.md)
+
 ---
 
 ## Before you test (one time per browser)
 
 1. **Load the extension**  
-   Edge → Extensions → Developer mode → **Load unpacked** → `extension/dist`
+   Edge or Chrome → Extensions → Developer mode → **Load unpacked** → `extension/dist`
 
-2. **Join your team (Alice)**  
-   - Open the Veil popup → complete org setup with join code + `alice@novacare.demo` (or your org email)  
-   - Confirm popup shows your team name and **Connected**
+2. **Join your team**  
+   - Open the Veil popup → **Team** → join code + work email  
+   - Or use the portal join page linked from your admin  
+   - Confirm popup **Home** checklist is green (connected, passphrase, copilot)
 
-3. **Enable Veil copilot** (required for paste/selection prompts)  
-   - Popup → **Advanced** (expand)  
-   - Expand **Veil security copilot (preview)**  
-   - Check **Enable Veil copilot**  
-   - Click **Save** at the bottom of the form  
+3. **Refresh the mail tab**  
+   After joining, reload Outlook or Gmail (F5) so the content script picks up settings.
 
-4. **Refresh the mail tab**  
-   After saving settings, reload Outlook (F5) so the content script picks up copilot.
-
-> **Copilot is off by default.** Without step 3, typing or pasting secrets will not show Encrypt / Mask / Allow.
+> **Team users:** Veil copilot is **on by default** after join. Personal users enable it in Settings.
 
 ---
 
-## Important: typing vs paste vs highlight
+## Important: paste vs highlight vs typing
 
 | Action | Copilot appears? |
 |--------|------------------|
-| **Type** secrets character-by-character | **No** — not wired yet |
 | **Paste** (Ctrl+V) sensitive text | **Yes** — paste copilot modal |
-| **Highlight** text you typed or pasted | **Yes** — Veil bar above selection |
-
-So in Outlook: **paste** the API key, or **type it then select/highlight it**.
+| **Highlight** text | **Yes** — Veil bar above selection |
+| **Type** then pause (~0.5s) in compose | **Yes** — if copilot enabled and text matches a detector |
 
 ---
 
@@ -42,35 +37,26 @@ So in Outlook: **paste** the API key, or **type it then select/highlight it**.
 
 1. Open Outlook on the web → **New mail**
 2. Click in the message body
-3. Copy this to your clipboard (do not type it):
+3. Copy this to your clipboard:
    ```
    AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe
    ```
 4. **Ctrl+V** in the body
 
-**Expected:** Modal — *Sensitive data pasted* — with **Encrypt**, **Mask**, **Allow** (and Tokenize if cloud org joined).
-
-**If nothing:** Copilot not enabled (step 3), tab not refreshed, or site snoozed (popup → clear snoozed sites).
+**Expected:** Modal — *Sensitive data pasted* — with **Encrypt**, **Mask**, **Allow**, and **Tokenize** (cloud org).
 
 ---
 
-## Test 2 — Selection copilot (after typing)
+## Test 2 — Selection copilot
 
-1. In the mail body, **type** (or paste) an IBAN, e.g.:
-   ```
-   DE89370400440532013000
-   ```
-2. **Mouse-select / highlight** the full IBAN (drag over the text)
+1. In the mail body, paste or type an IBAN, e.g. `DE89370400440532013000`
+2. **Highlight** the full IBAN
 
-**Expected:** Veil bar near the selection — categories shown, buttons **Encrypt**, **Mask**, etc.
-
-**If nothing:** Copilot off, text not selected (cursor alone is not enough), or not detected as compose field.
+**Expected:** Veil bar near the selection with Encrypt / Mask / Tokenize.
 
 ---
 
-## Test 3 — Classic Secure Text (no copilot required)
-
-Works even with copilot **off**:
+## Test 3 — Classic secure (shortcut)
 
 1. Highlight any secret in the mail body
 2. **Ctrl+Shift+S** or right-click → Veil → **Secure selection**
@@ -79,35 +65,35 @@ Works even with copilot **off**:
 
 ---
 
-## Test 4 — DLP enforce (optional, org admin)
+## Test 4 — Tokenize cross-client
 
-1. Popup → DLP mode → **Enforce** → Save → refresh tab  
-2. Paste an API key again  
+1. Tokenize a secret in **Outlook (Edge)**
+2. Send to yourself
+3. Open in **Gmail (Chrome)** with Veil installed and same org joined
+4. Click `[veil:vt_…]`
 
-**Expected:** Block or auto-mask per org policy (may block paste without modal if policy says block).
+**Expected:** Passphrase prompt → plaintext revealed.
 
 ---
 
-## Test 5 — Secure token (cloud org)
+## Test 5 — DLP enforce (org admin)
 
-1. Copilot on, joined to cloud org, team passphrase saved  
-2. Highlight API key → Veil bar → **Tokenize**  
+1. Admin portal → DLP → **Enforce** → Save
+2. Member extension syncs → paste API key again
 
-**Expected:** Selection becomes `[veil:vt_…]`; click chip to reveal.
+**Expected:** Block or auto-mask per org policy.
 
 ---
 
 ## Quick isolation checklist
 
-If Outlook fails, try **Gmail compose** with the same paste test. If Gmail works but Outlook does not, it is an Outlook/iframe issue — report host + browser.
-
 | Check | How |
 |-------|-----|
-| Copilot enabled? | Popup → Advanced → Enable Veil copilot → **Save** |
-| Tab refreshed after save? | F5 on Outlook |
-| Using paste or highlight? | Typing alone does not trigger copilot |
-| Extension loaded from `dist`? | Re-run `npm run package` after code changes |
-| Snoozed site? | Popup → clear snoozed hosts |
+| Team joined? | Popup Home checklist |
+| Copilot enabled? | Settings → Veil copilot (on by default for teams) |
+| Tab refreshed? | F5 on Outlook/Gmail |
+| Extension from `dist`? | Re-run `npm run package` after code changes |
+| Both browsers joined? | Edge and Chrome need separate join |
 
 ---
 
@@ -116,7 +102,5 @@ If Outlook fails, try **Gmail compose** with the same paste test. If Gmail works
 | Type | Example |
 |------|---------|
 | Google API key | `AIzaSyDaGmWKa4JsXZ-HjGw7ISLn_3namBGewQe` |
-| IBAN (compact) | `DE89370400440532013000` |
-| IBAN (spaced) | `DE89 3704 0044 0532 0130 00` |
+| IBAN | `DE89370400440532013000` |
 | Credit card | `4111111111111111` |
-| JWT | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U` |

@@ -45,6 +45,7 @@ const CONTENT_FILES = [
   'src/tokens/format.js',
   'src/tokens/api.js',
   'src/tokens/client.js',
+  'src/tokens/reveal.js',
   'src/tokens/detector.js',
   'src/actions/mask-text.js',
   'src/actions/registry.js',

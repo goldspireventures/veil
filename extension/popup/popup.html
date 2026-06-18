@@ -95,6 +95,12 @@
 
         <!-- Home -->
         <div id="tab-home" class="tab tab--active">
+          <div class="card card--readiness" id="readiness-card" hidden>
+            <h2 class="readiness__title">Setup checklist</h2>
+            <ul class="readiness__list" id="readiness-list"></ul>
+            <p class="hint" id="readiness-hint"></p>
+            <button type="button" id="readiness-enable-copilot" class="btn btn--ghost btn--sm" hidden>Enable copilot</button>
+          </div>
           <div class="card card--hero">
             <p id="selection-preview" class="selection-preview">Highlight text on the page.</p>
             <div class="row row--stack">
@@ -232,6 +238,14 @@
               </label>
             </div>
 
+            <div class="card card--settings-feature">
+              <label class="checkbox">
+                <input id="copilotEnabled" name="copilotEnabled" type="checkbox" />
+                <span>Veil copilot</span>
+              </label>
+              <p class="hint">Detects secrets when you paste or highlight text in email and forms.</p>
+            </div>
+
             <details class="settings-advanced">
               <summary>More options</summary>
               <div class="settings-advanced__body">
@@ -253,22 +267,14 @@
                     <input id="publicUnlockUrl" name="publicUnlockUrl" type="url" placeholder="Leave blank for default" />
                   </label>
                 </div>
-                <details class="card card--collapsible card--nested">
-                  <summary>Veil security copilot (preview)</summary>
-                  <p class="hint">Early access. Off by default — enable to test upcoming detection features.</p>
-                  <label class="checkbox">
-                    <input id="copilotEnabled" name="copilotEnabled" type="checkbox" />
-                    <span>Enable Veil copilot</span>
-                  </label>
-                  <label class="field">
-                    <span>DLP mode</span>
-                    <select id="dlpMode" name="dlpMode">
-                      <option value="off">Off</option>
-                      <option value="observe">Observe only (log locally)</option>
-                      <option value="enforce">Enforce (when policies ship)</option>
-                    </select>
-                  </label>
-                </details>
+                <label class="field profile-org-only" hidden>
+                  <span>DLP mode</span>
+                  <select id="dlpMode" name="dlpMode">
+                    <option value="off">Off</option>
+                    <option value="observe">Observe only (log locally)</option>
+                    <option value="enforce">Enforce org policy</option>
+                  </select>
+                </label>
               </div>
             </details>
 
@@ -298,22 +304,29 @@
           </div>
           <div id="help-organization" class="help-content" hidden>
             <div class="card">
-              <h2>How it works (team)</h2>
+              <h2>Quick start</h2>
               <ol>
-                <li>Join your team with a join code from your admin</li>
-                <li>Highlight sensitive text and press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></li>
-                <li>Send the message — secured text shows as <code>[redacted]</code></li>
-                <li>Teammates click <code>[redacted]</code> to unlock</li>
+                <li>Paste or highlight a secret in Outlook or Gmail compose</li>
+                <li>Choose <strong>Encrypt</strong>, <strong>Mask</strong>, or <strong>Tokenize</strong> from the Veil bar</li>
+                <li>Send as normal — recipients click <code>[redacted]</code> or <code>[veil:vt_…]</code> to reveal</li>
               </ol>
             </div>
             <div class="card">
+              <h2>Tokenize across email clients</h2>
+              <p class="card__text">Tokenize works when sending from Outlook to Gmail (and vice versa). Each browser needs Veil installed and your team joined. Use the same team passphrase.</p>
+            </div>
+            <div class="card">
               <h2>Team setup</h2>
-              <p class="card__text">Your team passphrase and settings are delivered when you join. When your admin changes the passphrase, your extension updates automatically.</p>
+              <p class="card__text">Your team passphrase syncs when you join. IT-managed installs receive it automatically via browser policy.</p>
             </div>
           </div>
           <div class="card">
+            <h2>Keyboard shortcuts</h2>
+            <p class="card__text"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> secure · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd> unlock · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> generate password</p>
+          </div>
+          <div class="card">
             <h2>Privacy</h2>
-            <p class="card__text">Encryption runs in your browser. Secured content is not sent to our servers.</p>
+            <p class="card__text">Encryption runs in your browser. Secured content is not sent to our servers. <a href="#" id="help-portal-link" target="_blank" rel="noopener">Team portal &amp; policies</a></p>
           </div>
         </div>
       </section>
