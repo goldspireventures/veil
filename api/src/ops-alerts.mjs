@@ -8,10 +8,10 @@ const lastSent = new Map();
 function webhookType(env, url) {
   const explicit = String(env.OPS_ALERT_WEBHOOK_TYPE || process.env.OPS_ALERT_WEBHOOK_TYPE || '').trim().toLowerCase();
   const lower = String(url || '').toLowerCase();
+  if (explicit === 'teams-webhook') return 'teams-webhook';
   if (lower.includes('powerautomate') || lower.includes('powerplatform.com')) return 'powerautomate';
   if (explicit === 'powerautomate' || explicit === 'teams' || explicit === 'slack' || explicit === 'generic') {
-    if (explicit === 'teams' && lower.includes('powerautomate')) return 'powerautomate';
-    return explicit;
+    return explicit === 'teams' && lower.includes('powerautomate') ? 'powerautomate' : explicit;
   }
   if (lower.includes('webhook.office.com') || lower.includes('outlook.office.com/webhook')) return 'teams';
   if (lower.includes('hooks.slack.com')) return 'slack';
@@ -55,17 +55,32 @@ function buildSlackPayload({ title, body, severity, at }) {
   };
 }
 
-/** Power Automate “post to Teams” flows — flat fields for easy mapping. */
+/** Power Automate / Teams Workflows — send {"text"} per Microsoft docs. */
 function buildPowerAutomatePayload({ title, body, severity, at }) {
-  const message = `${title}\n\n${body}\n\n— veil-api · ${severity} · ${at}`;
+  const text = `${title}\n\n${body}\n\n— veil-api · ${severity} · ${at}`;
+  return { text };
+}
+
+/** Teams connector webhook trigger (adaptive card path). */
+function buildTeamsWebhookPayload({ title, body, severity, at }) {
+  const text = `${title}\n\n${body}\n\n— veil-api · ${severity} · ${at}`;
   return {
-    title,
-    text: message,
-    body,
-    message,
-    severity,
-    service: 'veil-api',
-    at,
+    type: 'message',
+    text,
+    attachments: [{
+      contentType: 'application/vnd.microsoft.card.adaptive',
+      contentUrl: null,
+      content: {
+        $schema: 'http://adaptivecards.io/schemas/adaptive-card.json',
+        type: 'AdaptiveCard',
+        version: '1.4',
+        body: [
+          { type: 'TextBlock', text: title, weight: 'bolder', size: 'medium' },
+          { type: 'TextBlock', text: body, wrap: true },
+          { type: 'TextBlock', text: `veil-api · ${severity} · ${at}`, isSubtle: true, size: 'small' },
+        ],
+      },
+    }],
   };
 }
 
@@ -81,10 +96,21 @@ function buildGenericPayload({ title, body, severity, at }) {
 }
 
 export function buildWebhookPayload(type, alert) {
+  if (type === 'teams-webhook') return buildTeamsWebhookPayload(alert);
   if (type === 'powerautomate') return buildPowerAutomatePayload(alert);
   if (type === 'teams') return buildTeamsPayload(alert);
   if (type === 'slack') return buildSlackPayload(alert);
   return buildGenericPayload(alert);
+}
+
+export async function sendOpsAlertTest(env = {}) {
+  return raiseOpsAlert({
+    key: `manual_test_${Date.now()}`,
+    severity: 'warn',
+    title: 'Veil ops test alert',
+    body: 'If you see this in Teams chat, webhooks are working. Sent from veil-api test.',
+    env,
+  });
 }
 
 export async function raiseOpsAlert({ key, severity = 'warn', title, body, env = {} }) {
@@ -113,10 +139,12 @@ export async function raiseOpsAlert({ key, severity = 'warn', title, body, env =
         body: JSON.stringify(buildWebhookPayload(type, alert)),
         signal: AbortSignal.timeout(10_000),
       });
-      delivered = response.ok;
+      delivered = response.status >= 200 && response.status < 300;
+      const responseText = await response.text().catch(() => '');
       if (!delivered) {
-        const detail = await response.text().catch(() => '');
-        console.error('ops alert webhook rejected', response.status, detail.slice(0, 200));
+        console.error('ops alert webhook rejected', response.status, responseText.slice(0, 200));
+      } else if (responseText) {
+        console.log('ops alert webhook accepted', response.status, responseText.slice(0, 120));
       }
     } catch (error) {
       console.error('ops alert webhook failed', error);

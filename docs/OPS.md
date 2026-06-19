@@ -45,19 +45,39 @@ Per-org detail remains in **admin.html** (security events, SIEM webhook).
 
 Set `OPS_ALERT_WEBHOOK_URL` to a **Microsoft Teams** incoming webhook (recommended) or Slack URL.
 
-### Microsoft Teams
+### Microsoft Teams (Power Automate workflow)
 
-1. Teams channel → **⋯** → **Workflows** (or **Connectors** → **Incoming Webhook** on classic teams).
-2. Create a workflow: **Post to a channel when a webhook request is received**.
-3. Copy the webhook URL (`https://…webhook.office.com/…` or Power Automate URL).
-4. On Railway:
+Your URL is a **Power Automate manual/HTTP trigger** (`…/triggers/manual/…`). The API sends:
 
-```
-OPS_ALERT_WEBHOOK_TYPE=teams
-OPS_ALERT_WEBHOOK_URL=<paste URL>
+```json
+{ "text": "Alert title and body in one string" }
 ```
 
-Teams is auto-detected from the URL if `OPS_ALERT_WEBHOOK_TYPE` is unset.
+That matches [Microsoft’s Teams workflow webhook docs](https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook).
+
+**If you get HTTP 202 but no Teams message**, the webhook is fine — the **flow** is failing or not mapped:
+
+1. Open [Power Automate](https://make.powerautomate.com) → **My flows** → your Veil flow → **Run history**.
+2. Open the latest run — check for red **Failed** steps.
+3. Edit the flow → **Post message in a chat or channel** step:
+   - **Post in**: Chat (or the chat you chose)
+   - **Message**: pick dynamic content **`text`** from the trigger body  
+     (expression: `triggerBody()?['text']` or `body('When_a_HTTP_request_is_received')?['text']`)
+4. Save and turn the flow **On**.
+
+**Test from production** (after deploy):
+
+```bash
+curl -X POST "https://veil-api.goldspireventures.com/v1/ops/test-alert" \
+  -H "Authorization: Bearer YOUR_PLATFORM_OPS_TOKEN"
+```
+
+Railway env:
+
+```
+OPS_ALERT_WEBHOOK_TYPE=powerautomate
+OPS_ALERT_WEBHOOK_URL=<your Power Automate URL>
+```
 
 ### Slack (alternative)
 

@@ -46,7 +46,7 @@ import {
 } from './ops-service.mjs';
 import { checkRateLimit } from './rate-limit.mjs';
 import { normalizeRoute, recordRequestMetric, flushRequestMetrics } from './request-metrics.mjs';
-import { raiseOpsAlert } from './ops-alerts.mjs';
+import { raiseOpsAlert, sendOpsAlertTest } from './ops-alerts.mjs';
 import { startOpsMonitor } from './ops-monitor.mjs';
 
 const SERVER_STARTED_AT = Date.now();
@@ -251,6 +251,23 @@ const server = createServer(async (req, res) => {
       }
       const days = url.searchParams.get('days') || '7';
       const result = await getOpsSummary(days);
+      json(res, req, 200, result);
+      return;
+    }
+
+    if (req.method === 'POST' && pathname === '/v1/ops/test-alert') {
+      const rl = checkRateLimit(req, 'ops-test-alert', { limit: 5, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
+      const expected = String(env.PLATFORM_OPS_TOKEN || process.env.PLATFORM_OPS_TOKEN || '').trim();
+      if (!expected) throw httpError(503, 'Platform ops is not configured.');
+      const auth = String(req.headers.authorization || '');
+      const match = auth.match(/^Bearer\s+(.+)$/i);
+      const provided = match ? match[1].trim() : '';
+      if (!verifyOpsToken(expected, provided)) throw httpError(401, 'Invalid ops token.');
+      const result = await sendOpsAlertTest(env);
       json(res, req, 200, result);
       return;
     }
