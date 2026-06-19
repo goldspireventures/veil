@@ -96,4 +96,21 @@ test('isSensitiveSelectionText uses detectors and legacy heuristics', () => {
   assert.equal(lib.isSensitiveSelectionText('4111111111111111'), true);
   assert.equal(lib.isSensitiveSelectionText('Password1'), true);
   assert.equal(lib.isSensitiveSelectionText('hi'), false);
+  assert.equal(lib.isSensitiveSelectionText('stafford', { isNameField: true, intent: 'form_data_entry' }), false);
+});
+
+test('stafford is not SWIFT/BIC when typed lowercase', () => {
+  assert.equal(lib.findSwiftBics('stafford').length, 0);
+});
+
+test('Irish PPS number is detected separately from IBAN', () => {
+  const hits = lib.analyzeAll('2193825B', { isGovernmentIdField: true, intent: 'form_data_entry' });
+  assert.ok(hits.some((h) => h.category === 'national_id'));
+  assert.equal(hits.some((h) => h.category === 'iban'), false);
+  assert.equal(hits.some((h) => h.category === 'api_key'), false);
+});
+
+test('name field context suppresses stafford false positives', () => {
+  const hits = lib.analyzeAll('stafford', { isNameField: true, intent: 'form_data_entry', inForm: true });
+  assert.equal(hits.length, 0);
 });

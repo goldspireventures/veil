@@ -46,19 +46,25 @@
 
     if (intent === 'search') return false;
 
-    if (SECRET_CATEGORIES.has(cat)) return true;
-
-    if (intent === 'ai_prompt') {
-      return SECRET_CATEGORIES.has(cat) || FINANCIAL_CATEGORIES.has(cat) || cat === 'ssn';
-    }
-
-    if (intent === 'form_data_entry') {
+    if (intent === 'form_data_entry' || context.inForm) {
+      if (context.isNameField && ['api_key', 'swift_bic', 'jwt', 'iban', 'credit_card', 'routing_number'].includes(cat)) {
+        return false;
+      }
       if (context.expectsPii && PII_CATEGORIES.has(cat)) return false;
       if (isType && !TYPE_HIGH_SIGNAL.has(cat)) return false;
       if (isType && cat === 'swift_bic') return false;
       if (isType && (cat === 'email' || cat === 'phone')) return false;
       if (isPaste && PII_CATEGORIES.has(cat) && context.expectsPii) return false;
+      if (isType && ['api_key', 'swift_bic'].includes(cat) && (Number(context.matchConfidence) || 0) < 88) {
+        return false;
+      }
       return TYPE_HIGH_SIGNAL.has(cat) || FINANCIAL_CATEGORIES.has(cat);
+    }
+
+    if (SECRET_CATEGORIES.has(cat)) return true;
+
+    if (intent === 'ai_prompt') {
+      return SECRET_CATEGORIES.has(cat) || FINANCIAL_CATEGORIES.has(cat) || cat === 'ssn';
     }
 
     if (intent === 'admin_portal') {
@@ -87,7 +93,7 @@
     return (detections || []).filter((hit) => {
       const confidence = Number(hit.confidence) || 0;
       if (confidence < floor) return false;
-      return shouldPromptCategory(hit.category, context, source);
+      return shouldPromptCategory(hit.category, { ...context, matchConfidence: confidence }, source);
     });
   }
 

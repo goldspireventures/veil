@@ -80,11 +80,54 @@
       const label = document.querySelector(`label[for="${safeId}"]`);
       if (label) labelText = label.textContent || '';
     }
+    if (!labelText && typeof document !== 'undefined') {
+      let node = element.parentElement;
+      for (let depth = 0; depth < 5 && node; depth += 1) {
+        const nearby = node.querySelector?.('.form-label, .form-label-top, label, [class*="label"]');
+        if (nearby?.textContent?.trim()) {
+          labelText = nearby.textContent;
+          break;
+        }
+        node = node.parentElement;
+      }
+    }
 
     return { autocomplete, labelText, placeholder, name, id };
   }
 
+  function isNameField(element) {
+    const hints = fieldHints(element);
+    const auto = piiAutocomplete();
+    if (auto.has(hints.autocomplete) && ['given-name', 'family-name', 'name', 'nickname', 'additional-name'].includes(hints.autocomplete)) {
+      return true;
+    }
+    const combined = `${hints.labelText} ${hints.placeholder} ${hints.name} ${hints.id}`;
+    return /\b(first|last|full|given|family|sur|middle|maiden)\s*name\b/i.test(combined)
+      || /\bstudent\s*name\b/i.test(combined);
+  }
+
+  function isGovernmentIdField(element) {
+    const hints = fieldHints(element);
+    const combined = `${hints.labelText} ${hints.placeholder} ${hints.name} ${hints.id}`;
+    return /\b(pps|personal public service|national id|national insurance|nino|social security|ssn|tax id|student id)\b/i.test(combined);
+  }
+
+  function fieldExpectsPii(element) {
+    if (!element) return false;
+    const hints = fieldHints(element);
+    const auto = piiAutocomplete();
+    const labelRe = pattern('piiLabel');
+    if (auto.has(hints.autocomplete)) return true;
+    const combined = `${hints.labelText} ${hints.placeholder} ${hints.name} ${hints.id}`;
+    return labelRe.test(combined);
+  }
+
+  function isFormHost(host = '') {
+    return pattern('formHost').test(host || '');
+  }
+
   function formExpectsPii(form, element) {
+    if (fieldExpectsPii(element)) return true;
     if (!form && !element) return false;
 
     const hints = fieldHints(element);
@@ -197,13 +240,15 @@
     if (form) signals.push('html_form');
     if (expectsPii) signals.push('expected_pii');
 
-    if (form || pattern('formPath').test(path) || expectsPii) {
+    if (form || pattern('formPath').test(path) || expectsPii || isFormHost(host)) {
       return {
         intent: 'form_data_entry',
         outboundRisk: 'low',
-        expectsPii: expectsPii || pattern('formPath').test(path),
-        inForm: Boolean(form),
+        expectsPii: expectsPii || pattern('formPath').test(path) || isFormHost(host),
+        inForm: Boolean(form) || isFormHost(host),
         signals,
+        isNameField: isNameField(element),
+        isGovernmentIdField: isGovernmentIdField(element),
       };
     }
 
@@ -230,7 +275,10 @@
   global.GoldspireDetectionIntent = {
     inferIntent,
     formExpectsPii,
+    fieldExpectsPii,
     fieldHints,
+    isNameField,
+    isGovernmentIdField,
     isAdminSurface,
     isOwnPortalHost,
     mailHostPattern: () => pattern('mailHost'),

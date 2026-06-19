@@ -116,7 +116,9 @@ export function loadVeilStack(extra = {}) {
   for (const file of [
     'extension/src/detection/lib-bundle.js',
     'extension/src/detection/context.js',
+    'extension/src/detection/intent-config.js',
     'extension/src/detection/intent.js',
+    'extension/src/detection/context-resolve.js',
     'extension/src/detection/gating.js',
     'extension/src/detection/scoring.js',
     'extension/src/detection/engine.js',

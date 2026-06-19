@@ -52,7 +52,8 @@
     }
 
     const scored = global.GoldspireScoring?.scoreAll?.(results, ctx) || results;
-    return dedupeResults(scored);
+    const deduped = dedupeResults(scored);
+    return global.GoldspireDetectionContextResolve?.resolveDetections?.(text, deduped, ctx) || deduped;
   }
 
   function dedupeResults(results) {

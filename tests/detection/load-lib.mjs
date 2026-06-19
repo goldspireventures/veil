@@ -7,9 +7,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const libPath = join(root, 'extension/src/detection/lib-bundle.js');
 
 export function loadDetectionLib() {
-  const code = readFileSync(libPath, 'utf8');
   const sandbox = { globalThis: {} };
-  vm.runInNewContext(code, sandbox);
+  vm.runInNewContext(readFileSync(libPath, 'utf8'), sandbox);
+  vm.runInNewContext(readFileSync(join(root, 'extension/src/detection/context-resolve.js'), 'utf8'), sandbox);
+  vm.runInNewContext(readFileSync(join(root, 'extension/src/detection/gating.js'), 'utf8'), sandbox);
   return sandbox.globalThis.GoldspireDetectionLib;
 }
 

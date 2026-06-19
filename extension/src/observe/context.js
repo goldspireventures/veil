@@ -82,6 +82,10 @@
       signals: [],
     };
 
+    const hints = global.GoldspireDetectionIntent?.fieldHints?.(element) || {
+      labelText: '', placeholder: '', name: '', id: '', autocomplete: '',
+    };
+
     return global.GoldspireDetectionContext?.createContext?.({
       host,
       path,
@@ -93,6 +97,13 @@
       expectsPii: intentMeta.expectsPii,
       inForm: intentMeta.inForm,
       intentSignals: intentMeta.signals,
+      isNameField: intentMeta.isNameField || global.GoldspireDetectionIntent?.isNameField?.(element),
+      isGovernmentIdField: intentMeta.isGovernmentIdField || global.GoldspireDetectionIntent?.isGovernmentIdField?.(element),
+      fieldLabel: hints.labelText,
+      fieldPlaceholder: hints.placeholder,
+      fieldName: hints.name,
+      fieldId: hints.id,
+      fieldAutocomplete: hints.autocomplete,
     }) || { host, path, source: partial.source || 'paste', ...meta, ...intentMeta };
   }
 

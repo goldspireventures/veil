@@ -523,14 +523,17 @@
 
     let match;
     while ((match = pattern.exec(input)) !== null) {
-      const raw = match[1].toUpperCase();
-      if (!looksLikeSwiftBic(raw)) continue;
-      if (seen.has(raw)) continue;
-      seen.add(raw);
+      const raw = match[1];
+      const original = match[0];
+      const upper = raw.toUpperCase();
+      if (!looksLikeSwiftBic(upper)) continue;
+      if (original === original.toLowerCase() && !/\d/.test(original)) continue;
+      if (seen.has(upper)) continue;
+      seen.add(upper);
       results.push({
         category: 'swift_bic',
-        matchedText: redactPreview(raw, { showLast: 3 }),
-        matchedTextRaw: raw,
+        matchedText: redactPreview(upper, { showLast: 3 }),
+        matchedTextRaw: upper,
         index: match.index,
         confidence: 86,
         severity: 'high',
@@ -665,6 +668,32 @@
     return results;
   }
 
+  function findPpsNumbers(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const pattern = /\b(\d{7})([A-W])\b/gi;
+    const results = [];
+    const seen = new Set();
+    let match;
+    while ((match = pattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2].toUpperCase()}`;
+      const key = raw.toUpperCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 1 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 82,
+        severity: 'high',
+        recommendation: 'Do not share PPS or national identifiers in plain text.',
+        tags: ['pps', 'ie'],
+      });
+    }
+    return results;
+  }
+
   function findNationalIds(text) {
     const input = String(text || '');
     if (!input) return [];
@@ -673,11 +702,15 @@
       /\b[A-Z]{2}\d{6}[A-Z]?\b/g,
       /\bNINO[:\s-]?[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]?\b/gi,
     ];
-    const results = [];
+    const results = [...findPpsNumbers(input)];
+    const seen = new Set(results.map((hit) => String(hit.matchedTextRaw || '').toUpperCase()));
     for (const re of patterns) {
       let match;
       while ((match = re.exec(input)) !== null) {
         const raw = match[0];
+        const key = raw.toUpperCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
         results.push({
           category: 'national_id',
           matchedText: redactPreview(raw, { showLast: 2 }),
@@ -864,7 +897,8 @@
   }
 
   function analyzeAll(text, context = {}) {
-    return suppressIbanConflicts(text, sortDetections([
+    const ctx = context || {};
+    const resolved = suppressIbanConflicts(text, sortDetections([
       ...findCreditCards(text),
       ...findJwts(text),
       ...findApiKeys(text),
@@ -886,16 +920,19 @@
       ...findInternalCompanyRefs(text),
       ...findPasswords(text, context),
     ]));
+    return global.GoldspireDetectionContextResolve?.resolveDetections?.(text, resolved, ctx) || resolved;
   }
 
   function isSensitiveSelectionText(text, context = {}) {
     if (!text || text.length < 4) return false;
     const trimmed = String(text).trim();
-    const hits = analyzeAll(trimmed, { ...context, source: 'selection' });
-    if (hits.some((hit) => hit.confidence >= 50)) return true;
-    if (trimmed.length >= 8) return true;
-    if (/^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)[^\s]{8,}$/.test(trimmed)) return true;
-    return false;
+    const hits = analyzeAll(trimmed, { ...context, source: context.source || 'selection' });
+    const filtered = global.GoldspireDetectionGating?.filterForPrompt?.(
+      hits,
+      { ...context, source: context.source || 'selection' },
+      context.source || 'selection',
+    ) || hits.filter((hit) => hit.confidence >= 50);
+    return filtered.length > 0;
   }
 
   global.GoldspireDetectionLib = {

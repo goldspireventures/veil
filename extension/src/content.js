@@ -150,22 +150,22 @@
 
   function isSensitiveSelection(text) {
     const active = document.activeElement;
-    const context = {
-      source: 'selection',
-      isPasswordField: active instanceof HTMLInputElement && active.type === 'password',
-      fieldType: active instanceof HTMLInputElement ? active.type : '',
-      isEmailField: active instanceof HTMLInputElement && active.type === 'email',
-      isPhoneField: active instanceof HTMLInputElement && active.type === 'tel',
-    };
+    const context = global.GoldspireObserveContext?.contextFromTarget?.(active, { source: 'selection' })
+      || {
+        source: 'selection',
+        host: location.hostname || '',
+        isPasswordField: active instanceof HTMLInputElement && active.type === 'password',
+        fieldType: active instanceof HTMLInputElement ? active.type : '',
+        isEmailField: active instanceof HTMLInputElement && active.type === 'email',
+        isPhoneField: active instanceof HTMLInputElement && active.type === 'tel',
+      };
 
-    if (globalThis.GoldspireDetectionLib?.isSensitiveSelectionText) {
-      return globalThis.GoldspireDetectionLib.isSensitiveSelectionText(text, context);
-    }
-    if (!text || text.length < 4) return false;
+    if (!text || text.trim().length < 4) return false;
     const trimmed = text.trim();
     const results = globalThis.GoldspireDetection?.analyze?.(trimmed, context) || [];
-    if (results.some((hit) => hit.confidence >= 50)) return true;
-    return trimmed.length >= 8;
+    const filtered = global.GoldspireDetectionGating?.filterForPrompt?.(results, context, 'selection')
+      || results.filter((hit) => (Number(hit.confidence) || 0) >= 50);
+    return filtered.length > 0;
   }
 
   function isComposeContext() {
@@ -210,8 +210,7 @@
 
     const inCompose = isComposeContext();
 
-    // In compose fields, show the pill for any non-empty highlight (even short tokens).
-    if (inCompose) return true;
+    if (inCompose) return isSensitiveSelection(preview);
 
     if (preview.length < 4) return false;
 
@@ -1867,6 +1866,7 @@
   }
 
   GoldspireSelection.initSelectionTracking();
+  global.GoldspireMultiSelect?.initMultiWordSelection?.();
 
   document.addEventListener(
     'contextmenu',
