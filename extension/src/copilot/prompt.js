@@ -31,6 +31,7 @@
     onDismiss,
     variant = 'default',
     context = {},
+    settings = {},
     title = '',
     subtitle = '',
     alreadyInserted = false,
@@ -44,7 +45,7 @@
 
     const recommended = actions.find((a) => a.id === recommendedId && a.id !== 'ignore');
     const hint = recommended
-      ? global.GoldspireVeilActionRegistry?.recommendHint?.(recommended.id, context) || ''
+      ? global.GoldspireVeilActionRegistry?.recommendHint?.(recommended.id, context, settings) || ''
       : '';
     const triggerLabel = title
       || global.GoldspireVeilExplain?.buildTriggerLabel?.(context, alreadyInserted)
@@ -53,6 +54,7 @@
       policyMessage: subtitle,
       recommendedId,
       context,
+      settings,
     }) || [];
     const primaryActions = actions.filter((a) => a.id !== 'ignore');
     const allowAction = actions.find((a) => a.id === 'ignore');

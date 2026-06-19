@@ -147,6 +147,7 @@
       && trimmed.length <= 256
       && /^[A-Za-z0-9_\-./+]+$/.test(trimmed)
       && !/^\d+$/.test(trimmed)
+      && !fieldLooksLikeIban(trimmed)
       && !shouldSkipGenericSecretGuess(trimmed)
       && !findJwts(trimmed).some((entry) => entry.matchedTextRaw === trimmed)
     ) {
@@ -209,6 +210,7 @@
   function findPhones(text, context = {}) {
     const input = String(text || '');
     if (!input) return [];
+    if (fieldLooksLikeIban(input)) return [];
     const patterns = [
       /\b\+?\d{1,3}[-.\s]?\(?\d{2,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}\b/g,
       /\b\(\d{3}\)\s*\d{3}[-.\s]?\d{4}\b/g,
@@ -282,11 +284,23 @@
 
   function looksLikeIbanPrefix(value) {
     const compact = compactIbanToken(value);
-    if (!/^[A-Z]{2}\d{2}[A-Z0-9]*$/.test(compact)) return false;
+    if (!/^[A-Z]{2}\d{2}[A-Z0-9]*$/i.test(compact)) return false;
     if (compact.length < 4) return false;
-    const country = compact.slice(0, 2);
+    const country = compact.slice(0, 2).toUpperCase();
     if (!isKnownIbanCountry(country)) return false;
-    return compact.length <= IBAN_LENGTH_BY_COUNTRY[country];
+    const expected = IBAN_LENGTH_BY_COUNTRY[country];
+    return compact.length <= Math.min(34, expected + 2);
+  }
+
+  function fieldLooksLikeIban(text) {
+    const compact = compactIbanToken(text);
+    if (compact.length < 4) return false;
+    return looksLikeIbanPrefix(compact);
+  }
+
+  function suppressIbanConflicts(text, results) {
+    if (!fieldLooksLikeIban(text)) return results;
+    return (results || []).filter((hit) => hit.category !== 'api_key' && hit.category !== 'phone');
   }
 
   const VALID_BIC_COUNTRY = new Set([
@@ -368,6 +382,21 @@
     const results = [];
     const seen = new Set();
 
+    function pushPrefixHits(source) {
+      for (const prefixHit of findIbanPrefixes(source)) {
+        const key = compactIbanToken(prefixHit.matchedTextRaw);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push(prefixHit);
+      }
+    }
+
+    if (fieldLooksLikeIban(input)) {
+      pushPrefixHits(input);
+      const compactOnly = compactIbanToken(input);
+      if (compactOnly !== input) pushPrefixHits(compactOnly);
+    }
+
     function tryPushCompact(compact, index) {
       const value = String(compact || '').toUpperCase();
       if (value.length < 15 || value.length > 34) return;
@@ -397,13 +426,6 @@
           break;
         }
       }
-    }
-
-    for (const prefixHit of findIbanPrefixes(input)) {
-      const key = compactIbanToken(prefixHit.matchedTextRaw);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      results.push(prefixHit);
     }
 
     return results;
@@ -842,7 +864,7 @@
   }
 
   function analyzeAll(text, context = {}) {
-    return sortDetections([
+    return suppressIbanConflicts(text, sortDetections([
       ...findCreditCards(text),
       ...findJwts(text),
       ...findApiKeys(text),
@@ -863,7 +885,7 @@
       ...findCustomerIds(text),
       ...findInternalCompanyRefs(text),
       ...findPasswords(text, context),
-    ]);
+    ]));
   }
 
   function isSensitiveSelectionText(text, context = {}) {
@@ -893,6 +915,7 @@
     findNhsNumbers,
     findDatesOfBirth,
     looksLikeIbanPrefix,
+    fieldLooksLikeIban,
     shouldSkipGenericSecretGuess,
     sortDetections,
     findSsns,

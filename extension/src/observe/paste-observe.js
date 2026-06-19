@@ -312,27 +312,54 @@
   }
 
   async function scanTypedField(target, getSettings, getSettingsSync, isComposeContext) {
-    if (isComposeContext && !isComposeContext()) return;
+    if (isComposeContext && !isComposeContext()) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
 
     const fieldState = global.GoldspirePasteInsert?.readFieldState?.(target);
-    if (!fieldState?.text) return;
+    if (!fieldState?.text) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
 
     const text = fieldState.text.trim();
-    if (text.length < MIN_PROBE_CHARS) return;
+    if (text.length < MIN_PROBE_CHARS) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
 
     const settings = await resolveSettings(getSettingsSync, getSettings);
-    if (!settings || !isVeilObserveEnabled(settings)) return;
-    if (!global.GoldspireVeilCopilot?.shouldIntercept?.(settings)) return;
-    if (!settings.copilotEnabled) return;
+    if (!settings || !isVeilObserveEnabled(settings)) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
+    if (!global.GoldspireVeilCopilot?.shouldIntercept?.(settings)) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
+    if (!settings.copilotEnabled) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
 
     const context = buildContext(target, 'type');
-    if (global.GoldspireVeilSnooze?.isSnoozed?.(context.host)) return;
+    if (global.GoldspireVeilSnooze?.isSnoozed?.(context.host)) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
 
     const analyzed = analyzeSensitive(text, context);
-    if (!analyzed) return;
+    if (!analyzed) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
 
     const match = global.GoldspirePasteInsert?.findRawMatch?.(text, analyzed.detections);
-    if (!match?.raw) return;
+    if (!match?.raw) {
+      global.GoldspireVeilCopilotUI?.removePrompt?.();
+      return;
+    }
 
     if (global.GoldspireVeilSnooze?.isCompositionAllowed?.(context.host, text, match, fieldState)) return;
 

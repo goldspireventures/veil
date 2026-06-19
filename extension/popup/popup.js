@@ -128,9 +128,22 @@ function migrateSettings(settings) {
 function orgMessage(type, payload = {}) {
   return new Promise((resolve) => {
     api.runtime.sendMessage({ type, ...payload }, (response) => {
-      resolve(response || { ok: false });
+      const err = api.runtime.lastError;
+      if (err) {
+        resolve({ ok: false, error: friendlyRuntimeError(err.message) });
+        return;
+      }
+      resolve(response || { ok: false, error: 'No response from the extension background.' });
     });
   });
+}
+
+function friendlyRuntimeError(message) {
+  const msg = String(message || '');
+  if (/application not found|receiving end does not exist|could not establish connection/i.test(msg)) {
+    return 'Veil could not reach its background service. Close and reopen the popup, or reload the extension from edge://extensions.';
+  }
+  return msg || 'Extension message failed.';
 }
 
 function isOrgProvisioned(settings = {}) {
@@ -655,17 +668,31 @@ async function completeOrgMembership({ joinCode, email }) {
   const needsJoin = Boolean(joinCode) && !settings.orgId;
 
   if (needsJoin) {
-    const result = await orgMessage('ORG_JOIN', { joinCode, email });
-    if (!result?.ok) {
-      throw new Error(result?.error || 'Could not join your team.');
+    try {
+      if (typeof GoldspireOrgProvision?.joinWithCode === 'function') {
+        await GoldspireOrgProvision.joinWithCode(joinCode, email);
+      } else {
+        const result = await orgMessage('ORG_JOIN', { joinCode, email });
+        if (!result?.ok) {
+          throw new Error(result?.error || 'Could not join your team.');
+        }
+      }
+    } catch (error) {
+      throw new Error(error?.message || 'Could not join your team.');
     }
   } else if (!settings.orgId) {
     throw new Error('Enter your join code.');
   }
 
-  const registered = await orgMessage('ORG_REGISTER_MEMBER', { email });
+  const registered = typeof GoldspireOrgShare?.registerMember === 'function'
+    ? await GoldspireOrgShare.registerMember(email).catch((error) => ({ error: error?.message }))
+    : await orgMessage('ORG_REGISTER_MEMBER', { email });
   if (registered?.error) {
-    await orgMessage('ORG_DISCONNECT');
+    if (typeof GoldspireOrgProvision?.disconnectOrg === 'function') {
+      await GoldspireOrgProvision.disconnectOrg();
+    } else {
+      await orgMessage('ORG_DISCONNECT');
+    }
     throw new Error(registered.error);
   }
 

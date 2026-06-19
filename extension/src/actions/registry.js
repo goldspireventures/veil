@@ -152,10 +152,21 @@
     return ACTION_IDS.mask;
   }
 
-  function recommendHint(actionId, context = {}) {
+  function recommendHint(actionId, context = {}, settings = {}) {
     const ai = isAiSurface(context);
+    const copy = global.GoldspireCopy;
+    const isOrg = copy?.isOrgProfile?.(settings)
+      || context.securityProfile === 'organization'
+      || Boolean(settings?.orgId);
     if (actionId === ACTION_IDS.encrypt && !ai) {
-      return 'Best for email and chat — recipients with your team passphrase can unlock.';
+      if (isOrg) {
+        return `Best for email and chat — recipients with your team passphrase can unlock.`;
+      }
+      const mode = String(settings?.defaultSecureMode || context.defaultSecureMode || 'one-time');
+      if (mode === 'one-time') {
+        return 'Best for email and chat — recipients unlock with a one-time code or your passphrase.';
+      }
+      return 'Best for email and chat — recipients with your passphrase can unlock.';
     }
     if (actionId === ACTION_IDS.mask) {
       return ai

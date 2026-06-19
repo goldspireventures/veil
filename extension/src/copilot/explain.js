@@ -33,7 +33,7 @@
     return alreadyInserted ? 'Sensitive content in field' : 'Sensitive data pasted';
   }
 
-  function buildExplainSummary(detections = [], { policyMessage = '', recommendedId = '', context = {} } = {}) {
+  function buildExplainSummary(detections = [], { policyMessage = '', recommendedId = '', context = {}, settings = {} } = {}) {
     const lines = [];
     const unique = [];
     for (const d of detections) {
@@ -47,7 +47,7 @@
     }
     if (policyMessage) lines.push(policyMessage);
     const hint = recommendedId
-      ? global.GoldspireVeilActionRegistry?.recommendHint?.(recommendedId, context)
+      ? global.GoldspireVeilActionRegistry?.recommendHint?.(recommendedId, context, settings)
       : '';
     if (hint) lines.push(hint);
     return lines;

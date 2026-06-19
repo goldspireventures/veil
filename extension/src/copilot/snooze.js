@@ -47,10 +47,21 @@
   }
 
   const compositionAllowed = [];
+  const allowedFieldSignatures = new Set();
   let allowEpoch = 0;
   const fieldAllowEpoch = new WeakMap();
   const categorySnooze = new Map();
   const CATEGORY_SNOOZE_MS = 24 * 60 * 60 * 1000;
+
+  function fieldSignature(fieldState, host = '') {
+    const el = fieldState?.element;
+    if (!el) return '';
+    const tag = String(el.tagName || '').toUpperCase();
+    const id = el.id || '';
+    const name = el.getAttribute?.('name') || '';
+    const aria = el.getAttribute?.('aria-label') || '';
+    return `${String(host || '').trim()}:${tag}:${id}:${name}:${aria}`;
+  }
 
   function categoryKey(host, category) {
     return `${String(host || '').trim()}:${String(category || '').trim()}`;
@@ -78,6 +89,9 @@
   }
 
   function allowComposition(host, text, match, fieldState, detections = []) {
+    const key = String(host || '').trim();
+    const sig = fieldSignature(fieldState, key);
+    if (sig) allowedFieldSignatures.add(sig);
     if (fieldState?.element) {
       fieldAllowEpoch.set(fieldState.element, allowEpoch);
     }
@@ -88,7 +102,6 @@
     });
     if (compositionAllowed.length > 24) compositionAllowed.shift();
 
-    const key = String(host || '').trim();
     for (const hit of detections || []) {
       if (hit?.category) snoozeCategory(key, hit.category);
     }
@@ -97,6 +110,7 @@
 
   function clearCompositionAllows() {
     compositionAllowed.length = 0;
+    allowedFieldSignatures.clear();
     allowEpoch += 1;
   }
 
@@ -105,10 +119,12 @@
   }
 
   function isCompositionAllowed(host, text, match, fieldState) {
+    const key = String(host || '').trim();
+    const sig = fieldSignature(fieldState, key);
+    if (sig && allowedFieldSignatures.has(sig)) return true;
     if (fieldState?.element && fieldAllowEpoch.get(fieldState.element) === allowEpoch) {
       return true;
     }
-    const key = String(host || '').trim();
     const matchRaw = String(match?.raw || text || '').trim();
     const fieldText = String(fieldState?.text || text || '');
     return compositionAllowed.some(

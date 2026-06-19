@@ -53,6 +53,28 @@ test('analyzeAll prefers IBAN over generic secret guess', () => {
   assert.equal(hits[0].category, 'iban');
 });
 
+test('spaced Irish IBAN is classified as IBAN, not phone or api key', () => {
+  const sample = 'ie25 aibk 9900 3344 7649 8836';
+  const hits = lib.analyzeAll(sample);
+  assert.ok(hits.length > 0);
+  assert.equal(hits[0].category, 'iban');
+  assert.equal(hits.some((h) => h.category === 'phone'), false);
+  assert.equal(hits.some((h) => h.category === 'api_key'), false);
+});
+
+test('partial Irish IBAN with account fragment is IBAN', () => {
+  const hits = lib.analyzeAll('ie25 aibk 2193825B');
+  assert.ok(hits.some((h) => h.category === 'iban'));
+  assert.equal(lib.findApiKeys('ie25 aibk 2193825B').length, 0);
+});
+
+test('long IBAN-shaped string is not classified as api key', () => {
+  const sample = 'IE25AIBK9900334476498836';
+  const hits = lib.analyzeAll(sample);
+  assert.equal(hits.some((h) => h.category === 'api_key'), false);
+  assert.ok(hits.some((h) => h.category === 'iban'));
+});
+
 test('findSwiftBics detects BIC codes', () => {
   const hits = lib.findSwiftBics('pay via AIBKIE2D only');
   assert.equal(hits.length, 1);
