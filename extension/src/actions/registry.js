@@ -90,8 +90,10 @@
 
     if (actionId === ACTION_IDS.tokenize) {
       if (ai) return { available: false, reason: 'not_on_ai_surface' };
-      if (!settings.orgId || settings.orgProvisionSource !== 'cloud') {
-        return { available: false, reason: 'org_required' };
+      if (!global.GoldspireOrgCapability?.canUseCloudOrgFeatures?.(settings)) {
+        const hint = global.GoldspireOrgCapability?.tokenizeUnavailableReason?.(settings)
+          || 'Join a Veil team to use Tokenize.';
+        return { available: false, reason: 'org_required', hint };
       }
     }
 
@@ -106,6 +108,7 @@
           ...def,
           available: gate.available,
           reason: gate.reason || '',
+          hint: gate.hint || '',
           stub: Boolean(def.stub || gate.stub),
         };
       })

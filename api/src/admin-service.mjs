@@ -131,7 +131,7 @@ export async function createOrganization(body = {}) {
   if (displayName.length < 2) throw httpError(400, 'Team name must be at least 2 characters.');
   if (displayName.length > 120) throw httpError(400, 'Team name is too long.');
   if (teamPassphrase.length < 12) {
-    throw httpError(400, 'Team passphrase must be at least 12 characters.');
+    throw httpError(400, 'Team passphrase must be at least 16 characters.');
   }
 
   const allowedEmailDomains = parseAllowedDomains(body);
@@ -232,7 +232,7 @@ export async function updateOrganization(admin, body = {}) {
     : null;
   if (teamPassphrase != null) {
     if (teamPassphrase.length < 12) {
-      throw httpError(400, 'Team passphrase must be at least 12 characters.');
+      throw httpError(400, 'Team passphrase must be at least 16 characters.');
     }
     patches.push(`team_passphrase = $${index++}`);
     values.push(teamPassphrase);

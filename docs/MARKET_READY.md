@@ -38,7 +38,8 @@ Use this before announcing Veil publicly or onboarding paying customers.
 
 - [ ] Production API healthy (`/health`)
 - [ ] Database backups configured
-- [ ] Error/uptime monitoring on API host
+- [x] User feedback path (popup, portal, context menu)
+- [ ] Error/uptime monitoring on API host (configure UptimeRobot/Better Stack on `/health`)
 - [ ] Incident contact documented
 - [ ] Stripe: `npm run stripe:setup` → payment link in `.env` → `npm run env:apply`
 - [ ] Stripe webhook → `https://veil-api.goldspireventures.com/v1/webhooks/stripe` + `STRIPE_WEBHOOK_SECRET` on Railway

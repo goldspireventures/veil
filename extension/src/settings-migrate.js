@@ -11,7 +11,7 @@
     delete next.passphraseIn1Password;
 
     if (next.copilotEnabled !== undefined) {
-      next.copilotEnabled = next.copilotEnabled === true;
+      next.copilotEnabled = next.copilotEnabled === true || next.copilotEnabled === 'on';
     }
     if (next.dlpMode !== undefined) {
       const mode = String(next.dlpMode).toLowerCase();

@@ -1,4 +1,4 @@
-# Chrome Web Store & Edge Add-ons listing
+# Veil — Chrome Web Store & Edge Add-ons listing
 
 Draft copy for Veil extension store submissions.
 
@@ -8,23 +8,24 @@ Draft copy for Veil extension store submissions.
 
 ## Short description (132 chars max)
 
-Encrypt secrets in email & web apps before you send. [redacted] links, team tokens, paste copilot. Client-side encryption.
+Secure secrets in email & web before you send. Free personal use. Smart copilot, [redacted] links, team tokens.
 
 ## Full description
 
-Veil by Goldspire helps you protect sensitive text in Outlook, Gmail, and everyday web apps — before you hit send.
+**Veil by Goldspire** protects sensitive text in Outlook, Gmail, and everyday web apps — before you hit send. **Free for personal use** — no account required.
 
-**Secure inline** — Highlight an API key, password, or card number and replace it with `[redacted]`. Recipients unlock on the same page with your team passphrase.
+**Personal (free)**
+- Highlight or paste secrets → replace with `[redacted]`
+- Smart copilot catches API keys; stays quiet on signup forms
+- Recipients unlock on the same page with your passphrase
 
-**Tokenize for email** — Share `[veil:vt_…]` placeholders that teammates click to reveal. Works across email clients when your org uses Veil.
+**For teams**
+- Join with a code from your admin
+- **Secure**, **Mask**, or **Tokenize** in compose
+- Policy sync, metadata-only security events, optional SIEM export
+- IT can deploy via Chrome or Edge managed policy
 
-**Veil copilot** — Detects secrets when you paste or highlight text in compose fields and offers Encrypt, Mask, or Tokenize.
-
-**Privacy first** — Encryption runs in your browser. Veil’s cloud service stores org membership and encrypted token blobs — never your plaintext secrets.
-
-**For teams** — Admins create an organization, share a join code, and optionally deploy via Chrome or Edge managed policy.
-
-Requires a team join code from your administrator for organization features.
+**Privacy first** — Encryption runs in your browser. Veil cloud stores org membership and encrypted token blobs — never your plaintext secrets.
 
 ## Category
 
@@ -39,11 +40,11 @@ Productivity
 
 ## Privacy policy URL
 
-`https://join-veil.goldspireventures.com/privacy.html` (update to your hosted URL)
+https://join-veil.goldspireventures.com/privacy.html
 
 ## Support URL
 
-`mailto:support@goldspireventures.com`
+https://join-veil.goldspireventures.com/feedback.html
 
 ## Screenshots (capture before submit)
 
@@ -55,4 +56,4 @@ Productivity
 
 ## Edge Add-ons
 
-Use the same listing text. Edge package: load `extension/dist` as unpacked for review build, or submit zip from `npm run package`.
+Use the same listing text. Edge package: `extension/store/veil-1.2.3.zip` from `npm run package:store`.

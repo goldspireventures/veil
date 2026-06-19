@@ -437,7 +437,7 @@ async function refreshReadinessChecklist() {
     if (requiredOk && !recommended.every((item) => item.ok)) {
       hint.textContent = 'Recommended: turn on copilot so Veil catches secrets on paste.';
     } else if (!requiredOk) {
-      hint.textContent = 'Tap an item above to finish setup. Refresh mail (F5) after saving passphrase.';
+      hint.textContent = `Tap an item above to finish setup. ${GoldspireCopy?.refreshTabHint?.(settings) || 'Refresh the page after saving your passphrase.'}`;
     } else {
       hint.textContent = '';
     }
@@ -448,8 +448,8 @@ async function refreshReadinessChecklist() {
     enableBtn.onclick = async () => {
       const copilotEl = document.getElementById('copilotEnabled');
       if (copilotEl) copilotEl.checked = true;
-      await writeSyncSettings({ ...await readSyncSettings(), copilotEnabled: true });
-      showStatus('Copilot enabled — refresh your mail tab.');
+      await writeSyncSettings({ ...await readSyncSettings(), copilotEnabled: true, copilotUserSet: true });
+      showStatus(`Copilot enabled — ${GoldspireCopy?.refreshTabHint?.(await readSyncSettings()) || 'refresh the page.'}`);
       await refreshReadinessChecklist();
     };
   }
@@ -466,6 +466,10 @@ function applyProfileChrome(profile) {
   document.getElementById('advanced-org-only').hidden = !isOrg;
   document.getElementById('help-personal').hidden = isOrg;
   document.getElementById('help-organization').hidden = !isOrg;
+  const portalLink = document.getElementById('help-portal-link');
+  const installLink = document.getElementById('help-install-link');
+  if (portalLink) portalLink.hidden = !isOrg;
+  if (installLink) installLink.hidden = isOrg;
   document.querySelectorAll('.profile-org-only').forEach((el) => {
     el.hidden = !isOrg;
   });
@@ -635,8 +639,8 @@ async function completeOrgMembership({ joinCode, email }) {
   }
 
   const joined = await readSyncSettings();
-  await finishSetup('organization', { orgMemberEmail: email, copilotEnabled: true });
-  showStatus(`Connected to ${joined.orgDisplayName || 'your team'}. Refresh your mail tab to use copilot.`);
+  await finishSetup('organization', { orgMemberEmail: email, copilotEnabled: true, copilotUserSet: false });
+  showStatus(`Connected to ${joined.orgDisplayName || 'your team'}. ${GoldspireCopy?.refreshTabHint?.({ securityProfile: 'organization' }) || 'Refresh your mail tab.'}`);
 }
 
 function showPendingOrgSetup(settings = {}) {
@@ -662,7 +666,7 @@ document.getElementById('setup-org-signin')?.addEventListener('click', async () 
     showStatus(result.error);
     return;
   }
-  showStatus('Finish sign-in in the browser tab, then return here.');
+  showStatus('Open the join page if in-popup connect fails — same join code and work email.');
 });
 
 document.getElementById('disconnect-org')?.addEventListener('click', async () => {
@@ -913,8 +917,9 @@ passphraseFromVaultInput?.addEventListener('change', async () => {
 document.getElementById('copilotEnabled')?.addEventListener('change', async (event) => {
   const enabled = event.target.checked === true;
   try {
-    await writeSyncSettings({ ...await readSyncSettings(), copilotEnabled: enabled });
-    showStatus(enabled ? 'Copilot enabled — refresh your mail tab (F5).' : 'Copilot off.');
+    await writeSyncSettings({ ...await readSyncSettings(), copilotEnabled: enabled, copilotUserSet: true });
+    const settings = await readSyncSettings();
+    showStatus(enabled ? `Copilot enabled — ${GoldspireCopy?.refreshTabHint?.(settings) || 'refresh the page.'}` : 'Copilot off.');
     await refreshReadinessChecklist();
   } catch (error) {
     showStatus(error?.message || 'Could not save copilot setting.');
@@ -1114,13 +1119,15 @@ document.getElementById('action-unlock')?.addEventListener('click', () => sendTo
 function refreshSelectionPreview() {
   const preview = document.getElementById('selection-preview');
   if (!preview) return;
-  api.runtime.sendMessage({ type: 'GET_SELECTION_STATUS' }, (response) => {
-    const text = response?.preview?.trim() || '';
-    preview.textContent = text
-      ? `"${text.slice(0, 48)}${text.length > 48 ? '…' : ''}"`
-      : 'Highlight text on the page.';
-    preview.classList.toggle('selection-preview--ready', Boolean(text));
-  });
+  readSyncSettings().then((settings) => {
+    api.runtime.sendMessage({ type: 'GET_SELECTION_STATUS' }, (response) => {
+      const text = response?.preview?.trim() || '';
+      preview.textContent = text
+        ? `"${text.slice(0, 48)}${text.length > 48 ? '…' : ''}"`
+        : (GoldspireCopy?.homeEmptyHint?.(settings) || 'Highlight text on the page.');
+      preview.classList.toggle('selection-preview--ready', Boolean(text));
+    });
+  }).catch(() => {});
 }
 
 // ── Snoozed sites ───────────────────────────────────────────────────────────
@@ -1162,12 +1169,29 @@ if (api.storage?.onChanged) {
   });
 }
 
-loadSettings().catch(() => showStatus('Could not load settings.'));
+loadSettings().then(async () => {
+  const notice = await GoldspireStatusNotice?.consumeNotice?.();
+  if (notice?.message) showStatus(notice.message);
+}).catch(() => showStatus('Could not load settings.'));
 
 const helpPortalLink = document.getElementById('help-portal-link');
-if (helpPortalLink && typeof GoldspireConstants !== 'undefined') {
+const helpInstallLink = document.getElementById('help-install-link');
+const helpPrivacyLink = document.getElementById('help-privacy-link');
+if (typeof GoldspireConstants !== 'undefined') {
   const portal = GoldspireConstants.ORG_PORTAL_URL || '';
-  helpPortalLink.href = portal.replace(/join\.html.*$/i, 'index.html') || 'https://join-veil.goldspireventures.com/index.html';
+  const base = portal.replace(/join\.html.*$/i, '') || 'https://join-veil.goldspireventures.com/';
+  if (helpPortalLink) helpPortalLink.href = `${base}index.html`;
+  if (helpInstallLink) helpInstallLink.href = `${base}install.html`;
+  if (helpPrivacyLink) helpPrivacyLink.href = `${base}privacy.html`;
+}
+
+const shortcutHint = document.getElementById('shortcut-hint');
+const selectionTip = document.getElementById('selection-tip-shortcuts');
+if (shortcutHint && typeof GoldspireCopy !== 'undefined') {
+  shortcutHint.textContent = `${GoldspireCopy.shortcutPair('secure')} secure · ${GoldspireCopy.shortcutPair('options')} options · ${GoldspireCopy.shortcut('unlock')} unlock · ${GoldspireCopy.shortcut('generate')} generate`;
+}
+if (selectionTip && typeof GoldspireCopy !== 'undefined') {
+  selectionTip.textContent = `${GoldspireCopy.shortcutPair('secure')} Quick · ${GoldspireCopy.shortcutPair('options')} Options · Outlook: use the pill on the right`;
 }
 
 async function collectFeedbackMeta() {

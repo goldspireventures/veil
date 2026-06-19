@@ -81,9 +81,11 @@
       btn.dataset.actionId = action.id;
       btn.disabled = action.stub || action.available === false;
       btn.textContent = action.label.replace(/…$/, '');
-      const title = action.id === recommendedId && hint
-        ? `${action.label} — ${hint}`
-        : (action.description || action.label);
+      const title = action.available === false && action.hint
+        ? action.hint
+        : action.id === recommendedId && hint
+          ? `${action.label} — ${hint}`
+          : (action.description || action.label);
       btn.title = title;
       container.appendChild(btn);
     }

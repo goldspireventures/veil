@@ -16,7 +16,7 @@ Check the popup **Home** tab — the setup checklist should be all green.
 
 | Method | What to do |
 |--------|------------|
-| **Paste** | Paste sensitive text → Veil copilot modal → Encrypt / Mask / Tokenize |
+| **Paste** | Paste sensitive text → Veil copilot modal → Secure / Mask / Tokenize |
 | **Highlight** | Select text → Veil bar appears → choose an action |
 | **Shortcut** | Highlight → `Ctrl+Shift+S` to secure as `[redacted]` |
 

@@ -15,7 +15,7 @@
   ]);
 
   const MIN_LENGTH = {
-    personal: 12,
+    personal: 16,
     organization: 16,
     oneTime: 10,
   };

@@ -315,7 +315,7 @@
       : (modes[0]?.value || 'team');
 
     const panelHtml = {
-      team: '<p class="gst-veil-pop__hint">Uses your saved team passphrase from Veil settings.</p>',
+      team: '<p class="gst-veil-pop__hint">Uses your saved passphrase from Veil settings.</p>',
       direct: `
         <p class="gst-veil-pop__hint">Unlock keys go only to the people you name — not everyone on the email thread. Use Team for groups or lists.</p>
         <div class="gst-veil-pop__field">

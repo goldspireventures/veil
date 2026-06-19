@@ -101,6 +101,8 @@
       throw new Error('Invalid organization response.');
     }
 
+    const current = await storageGet('sync', global.GoldspireSettings?.DEFAULT_SETTINGS || {});
+
     const patch = {
       securityProfile: 'organization',
       setupComplete: false,
@@ -112,10 +114,13 @@
       useSavedPassphrase: payload.useSavedPassphrase !== false,
       defaultSecureMode: payload.defaultSecureMode || 'team',
       enforceStrongPassphrase: payload.enforceStrongPassphrase !== false,
-      copilotEnabled: payload.copilotEnabled !== false,
       productAnalytics: payload.productAnalytics !== false,
       selectionUiMode: payload.selectionUiMode || 'smart',
     };
+
+    if (!current.copilotUserSet) {
+      patch.copilotEnabled = payload.copilotEnabled !== false;
+    }
 
     if (payload.resecureDelaySeconds != null) {
       patch.resecureDelaySeconds = payload.resecureDelaySeconds;
@@ -154,7 +159,7 @@
   function apiFetchError(base, error) {
     if (error?.message === 'Failed to fetch' || error?.name === 'TypeError') {
       return new Error(
-        `Cannot reach organization server at ${base}. Start it with npm run api:dev, then try Connect again.`,
+        'Cannot reach the Veil service right now. Check your connection and try again in a few minutes.',
       );
     }
     return error instanceof Error ? error : new Error(String(error));
@@ -256,7 +261,7 @@
 
     if (response.status === 304) return { synced: true, unchanged: true };
     if (response.status === 401) {
-      await disconnectOrg();
+      await disconnectOrg({ reason: 'revoked' });
       return { synced: false, reason: 'revoked' };
     }
     if (!response.ok) {
@@ -273,7 +278,7 @@
     return { synced: true, policyVersion: data.policyVersion };
   }
 
-  async function disconnectOrg() {
+  async function disconnectOrg(options = {}) {
     await saveProvisionToken('');
     await global.GoldspireSecrets?.savePassphrase?.('', 'organization');
     await writeSyncSettings({
@@ -281,9 +286,23 @@
       orgId: '',
       orgDisplayName: '',
       orgPolicyVersion: 0,
+      orgTeamId: '',
+      orgTeamName: '',
       setupComplete: false,
       securityProfile: 'personal',
+      dlpMode: 'off',
+      dlpPolicy: null,
+      teamDlpPolicy: null,
     });
+
+    if (options.reason === 'revoked') {
+      await global.GoldspireStatusNotice?.queueNotice?.({
+        level: 'warn',
+        id: 'org-revoked',
+        message: 'Your team disconnected this browser. Open Veil → Settings to re-join, or continue in personal mode.',
+      });
+    }
+
     return { ok: true };
   }
 

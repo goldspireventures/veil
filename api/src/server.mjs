@@ -143,7 +143,12 @@ const server = createServer(async (req, res) => {
 
   try {
     if (req.method === 'GET' && pathname === '/health') {
-      json(res, req, 200, { ok: true, service: 'veil-api' });
+      json(res, req, 200, {
+        ok: true,
+        service: 'veil-api',
+        version: process.env.npm_package_version || '1.2.3',
+        at: new Date().toISOString(),
+      });
       return;
     }
 

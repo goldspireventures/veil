@@ -3,6 +3,9 @@
  */
 (function (global) {
   async function canUseTokens(settings) {
+    if (global.GoldspireOrgCapability?.canUseCloudOrgFeatures) {
+      return global.GoldspireOrgCapability.canUseCloudOrgFeatures(settings);
+    }
     return Boolean(
       global.GoldspireConstants?.ORG_API_BASE
       && settings?.orgProvisionSource === 'cloud'

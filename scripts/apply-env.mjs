@@ -54,6 +54,8 @@ const portalUnlockUrl = unlockUrl;
 const earlyAccess = String(env.VEIL_EARLY_ACCESS ?? 'true').toLowerCase() !== 'false';
 const stripePaymentLinkTeam = env.STRIPE_PAYMENT_LINK_TEAM ?? '';
 const stripeBillingPortalUrl = env.STRIPE_BILLING_PORTAL_URL ?? '';
+const storeUrlChrome = env.STORE_URL_CHROME ?? '';
+const storeUrlEdge = env.STORE_URL_EDGE ?? '';
 
 const constantsContents = `/**
  * Built-in defaults shipped with the extension (no user setup required).
@@ -96,6 +98,8 @@ const portalConfigContents = `/**
     EARLY_ACCESS: ${earlyAccess},
     STRIPE_PAYMENT_LINK_TEAM: ${jsString(stripePaymentLinkTeam)},
     STRIPE_BILLING_PORTAL_URL: ${jsString(stripeBillingPortalUrl)},
+    STORE_URL_CHROME: ${jsString(storeUrlChrome)},
+    STORE_URL_EDGE: ${jsString(storeUrlEdge)},
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);
 `;

@@ -1,4 +1,4 @@
-importScripts('constants.js', 'browser.js', 'feedback.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'events/bus.js', 'events/ingest.js', 'tokens/format.js', 'tokens/api.js');
+importScripts('constants.js', 'browser.js', 'feedback.js', 'status-notice.js', 'crypto.js', 'marker.js', 'editor-host.js', 'redacted.js', 'secrets.js', 'settings-migrate.js', 'settings.js', 'managed-policy.js', 'share-keys.js', 'org-provision.js', 'share-recipients.js', 'org-share.js', 'events/bus.js', 'events/ingest.js', 'tokens/format.js', 'tokens/api.js');
 
 const MENU_ROOT = 'goldspire-root';
 const MENU_SECURE = 'goldspire-secure-selection';
@@ -26,6 +26,9 @@ const CONTENT_FILES = [
   'src/policy/packs.js',
   'src/settings-migrate.js',
   'src/settings.js',
+  'src/org-capability.js',
+  'src/copy.js',
+  'src/status-notice.js',
   'src/resecure.js',
   'src/ui.js',
   'src/detector.js',
@@ -88,9 +91,24 @@ async function applyEnterprisePolicy() {
 
 async function syncCloudOrgPolicy() {
   try {
-    await GoldspireOrgProvision.syncOrgPolicy();
+    const result = await GoldspireOrgProvision.syncOrgPolicy();
+    if (result?.reason === 'revoked') return result;
+    if (result?.synced === false && result?.reason && result.reason !== 'not_provisioned' && result.reason !== 'not_cloud') {
+      await GoldspireStatusNotice?.queueNotice?.({
+        level: 'warn',
+        id: 'org-sync-failed',
+        message: 'Could not sync team settings. Veil will retry automatically.',
+      });
+    }
+    return result;
   } catch (error) {
     console.warn(`${MENU_LOG}: cloud org sync failed`, error);
+    await GoldspireStatusNotice?.queueNotice?.({
+      level: 'warn',
+      id: 'org-sync-error',
+      message: 'Could not reach Veil to sync team settings. Check your connection.',
+    });
+    return { synced: false, reason: 'error' };
   }
 }
 
@@ -107,9 +125,15 @@ async function syncCloudOrgShares() {
 
 async function uploadVeilSecurityEvents() {
   try {
-    await GoldspireVeilIngest?.uploadPendingEvents?.();
+    const result = await GoldspireVeilIngest?.uploadPendingEvents?.();
+    if (result?.reason === 'revoked') return result;
+    if (result?.ok === false && result?.reason === 'network') {
+      console.warn(`${MENU_LOG}: veil event upload failed (network)`);
+    }
+    return result;
   } catch (error) {
     console.warn(`${MENU_LOG}: veil event upload failed`, error);
+    return { ok: false, reason: 'error' };
   }
 }
 
@@ -578,3 +602,7 @@ if (api.runtime.onMessageExternal) {
     return true;
   });
 }
+
+self.addEventListener('unhandledrejection', (event) => {
+  console.warn(`${MENU_LOG}: unhandled rejection`, event.reason);
+});

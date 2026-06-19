@@ -65,6 +65,9 @@
 
   async function canLookupOrgShares() {
     const settings = await global.GoldspireSettings.load();
+    if (global.GoldspireOrgCapability?.canUseCloudApi) {
+      return global.GoldspireOrgCapability.canUseCloudApi(settings);
+    }
     return Boolean(
       apiBase()
       && settings.orgProvisionSource === 'cloud'

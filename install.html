@@ -14,24 +14,31 @@
 
     <div class="card">
       <h1>Install Veil</h1>
-      <p class="lede">Chrome and Microsoft Edge extension. Firefox supported with Gecko ID configuration.</p>
+      <p class="lede">Free for personal use. Teams add join codes, tokens, and policy sync.</p>
+
+      <div class="btn-row" id="store-links">
+        <a class="btn" id="store-edge" href="https://microsoftedge.microsoft.com/addons/search/Veil%20Goldspire" target="_blank" rel="noopener">Get for Microsoft Edge</a>
+        <a class="btn btn--ghost" id="store-chrome" href="https://chromewebstore.google.com/search/Veil%20Goldspire" target="_blank" rel="noopener">Get for Chrome</a>
+      </div>
+      <p class="hint">Search <strong>Veil by Goldspire</strong> if the link opens search results. Firefox: load unpacked from <code>extension/dist</code> with Gecko extension ID configured.</p>
 
       <h2>Personal use</h2>
       <ol class="steps">
-        <li>Install from your browser store (or load unpacked for pilots — see below).</li>
-        <li>Open Veil → choose <strong>Personal</strong> → set a passphrase.</li>
-        <li>Highlight sensitive text in Gmail, Outlook, or any web form → <strong>Secure selection</strong> or use the keyboard shortcut.</li>
+        <li>Install from the store button above.</li>
+        <li>Open Veil → choose <strong>Personal</strong> → set a passphrase (16+ characters).</li>
+        <li>Paste or highlight secrets in Gmail, Outlook, or forms — use <strong>Secure</strong> or the Veil copilot.</li>
       </ol>
 
       <h2>Team members</h2>
       <ol class="steps">
-        <li>Install Veil from your org catalog or store link from your admin.</li>
-        <li>Open the popup → <strong>Team</strong> → enter join code and work email.</li>
-        <li>Save the team passphrase your admin shares (password manager recommended).</li>
-        <li>Refresh Outlook or Gmail. Veil copilot appears on paste and while typing sensitive content.</li>
+        <li>Install Veil from the store or your IT catalog.</li>
+        <li>Open the popup → <strong>Team</strong> → enter join code and work email → <strong>Connect</strong>.</li>
+        <li>Cloud teams: passphrase syncs on join — refresh Outlook or Gmail. Self-hosted: use the passphrase your admin shares.</li>
+        <li>Veil copilot catches secrets on paste; stays quiet on signup forms.</li>
       </ol>
       <div class="btn-row">
         <a class="btn" href="join.html">Join with a code</a>
+        <a class="btn btn--ghost" href="feedback.html">Feedback</a>
       </div>
 
       <h2>Recipients without Veil</h2>
@@ -47,9 +54,9 @@
         <li>Apply a <strong>policy pack</strong> in the admin portal — Finance, Healthcare, Engineering, or observational rollout.</li>
         <li>Forward <strong>metadata-only</strong> security events to your SIEM webhook; export JSON or CSV from the admin dashboard.</li>
       </ul>
-      <p class="hint">Enterprise deployment details: <code>extension/docs/ENTERPRISE.md</code> in the Veil repository.</p>
+      <p class="hint">Enterprise deployment guide: <a href="https://github.com/goldspire-global/veil/blob/main/extension/docs/ENTERPRISE.md" target="_blank" rel="noopener">ENTERPRISE.md on GitHub</a></p>
       <div class="btn-row">
-        <a class="btn btn--ghost" href="admin.html">Admin portal</a>
+        <a class="btn btn--ghost" href="admin.html">Admin sign-in</a>
         <a class="btn btn--ghost" href="create.html">Create a team</a>
       </div>
 
@@ -76,6 +83,10 @@
     const unlockLink = document.getElementById('unlock-page-link');
     const configured = window.GoldspirePortal?.UNLOCK_URL;
     if (unlockLink && configured) unlockLink.href = configured;
+    const edge = document.getElementById('store-edge');
+    const chrome = document.getElementById('store-chrome');
+    if (window.GoldspirePortal?.STORE_URL_EDGE && edge) edge.href = window.GoldspirePortal.STORE_URL_EDGE;
+    if (window.GoldspirePortal?.STORE_URL_CHROME && chrome) chrome.href = window.GoldspirePortal.STORE_URL_CHROME;
   </script>
 </body>
 </html>

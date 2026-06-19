@@ -10,5 +10,7 @@
     EARLY_ACCESS: true,
     STRIPE_PAYMENT_LINK_TEAM: "https://buy.stripe.com/28EbJ30JL7RU8q1cKj0Ny00",
     STRIPE_BILLING_PORTAL_URL: "",
+    STORE_URL_CHROME: "",
+    STORE_URL_EDGE: "",
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

@@ -128,10 +128,10 @@
       const created = await global.GoldspireVeilTokens?.createToken?.(text, settings, { category });
       if (!created?.ok) {
         const msg = created?.error === 'no_passphrase'
-          ? 'Set your team passphrase in Veil settings first.'
+          ? (global.GoldspireCopy?.passphraseMissingError?.(settings) || 'Set your passphrase in Veil settings first.')
           : created?.error === 'org_required'
-            ? 'Sign in to your organization in Veil settings.'
-            : 'Could not create token.';
+            ? (global.GoldspireOrgCapability?.tokenizeUnavailableReason?.(settings) || 'Join a Veil team to use Tokenize.')
+            : 'Could not create token — try Secure or Mask instead.';
         global.GoldspireSecureUI?.showToast?.(msg, 'error');
         return created || { ok: false, error: 'tokenize_failed' };
       }

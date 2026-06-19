@@ -9,6 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function loadActionsStack() {
   const g = {
+    GoldspireConstants: { ORG_API_BASE: 'https://api.test' },
     GoldspireSettings: {
       isVeilActive: (s) => s?.copilotEnabled === true || s?.dlpMode === 'observe',
     },
@@ -25,6 +26,7 @@ function loadActionsStack() {
   };
 
   for (const relativePath of [
+    'extension/src/org-capability.js',
     'extension/src/detection/lib-bundle.js',
     'extension/src/actions/mask-text.js',
     'extension/src/actions/registry.js',

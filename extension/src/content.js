@@ -46,11 +46,12 @@
   }
 
   function canUseOrgSharing(settings) {
-    return Boolean(
-      GoldspireConstants?.ORG_API_BASE
-      && settings.orgProvisionSource === 'cloud'
-      && settings.orgId,
-    );
+    return global.GoldspireOrgCapability?.canUseCloudApi?.(settings)
+      ?? Boolean(
+        GoldspireConstants?.ORG_API_BASE
+        && settings.orgProvisionSource === 'cloud'
+        && settings.orgId,
+      );
   }
 
   async function ensureOrgSharingReady(settings) {
@@ -662,9 +663,10 @@
       const unlockBtn = pill.querySelector('.gst-pill-unlock');
       const hint = pill.querySelector('.gst-pill-hint');
 
-      if (!wantSecurePill && !wantUnlockPill) {
-        pill.classList.remove('gst-selection-status--visible');
-      } else if (wantUnlockPill) {
+      const quickBtn = pill.querySelector('.gst-pill-half--quick');
+      if (quickBtn && settings) {
+        quickBtn.title = global.GoldspireCopy?.quickSecureTitle?.(settings) || 'Quick secure';
+      }
         split?.setAttribute('hidden', '');
         unlockBtn?.removeAttribute('hidden');
         if (hint) hint.textContent = '';
@@ -959,7 +961,7 @@
         <button type="button" class="gst-pill-unlock" hidden title="Unlock [redacted]">Unlock</button>
         <span class="gst-pill-hint"></span>
       </div>
-      <button type="button" class="gst-pill-snooze" title="Don't show on this site">✕</button>
+      <button type="button" class="gst-pill-snooze" title="Hide for 30 minutes (right-click: hide on this site)">✕</button>
     `;
     document.documentElement.appendChild(pill);
 
@@ -1501,7 +1503,7 @@
     const selectionSummary = getSelectionSummary();
     const defaultMode = settings.defaultSecureMode === 'one-time' ? 'one-time' : 'team';
     const protectionOptions = [
-      { value: 'team', label: 'Team', checked: defaultMode === 'team' },
+      { value: 'team', label: global.GoldspireCopy?.secureModeLabel?.(settings, 'team') || 'Team', checked: defaultMode === 'team' },
       ...(sharingAvailable
         ? [{ value: 'direct', label: 'Specific people', checked: false }]
         : []),
@@ -1533,9 +1535,9 @@
         const unlockSecret = teamPassphrase;
         if (!unlockSecret) {
           if (settings.passphraseFromVault) {
-            throw new Error('Open Veil and enter your team passphrase for this session.');
+            throw new Error(global.GoldspireCopy?.passphraseMissingError?.(settings) || 'Passphrase required.');
           }
-          throw new Error('Set your team passphrase in Veil settings first.');
+          throw new Error(global.GoldspireCopy?.passphraseMissingError?.(settings) || 'Set your passphrase in Veil settings first.');
         }
 
         if (settings.enforceStrongPassphrase !== false) {
@@ -1651,7 +1653,10 @@
     }
 
     if (!teamPassphrase) {
-      GoldspireSecureUI.showToast('Set your team passphrase first.', 'error');
+      GoldspireSecureUI.showToast(
+        global.GoldspireCopy?.passphraseMissingError?.(settings) || 'Set your passphrase in Veil settings first.',
+        'error',
+      );
       return;
     }
 
@@ -1868,9 +1873,13 @@
 
   // Pre-load snoozed hosts and cache settings for synchronous UI decisions
   runSafe(GoldspireVeilSnooze?.load?.() || loadSnoozedHosts());
-  getSettings().then((s) => {
+  getSettings().then(async (s) => {
     cachedUiSettings = s;
     scheduleOrgShareSync(s);
+    const notice = await global.GoldspireStatusNotice?.consumeNotice?.();
+    if (notice?.message) {
+      safeToast(notice.message, notice.level === 'error' ? 'error' : 'info');
+    }
   }).catch(() => {});
 
   document.addEventListener('visibilitychange', () => {
@@ -1964,4 +1973,9 @@
   } catch (error) {
     if (isInvalidatedError(error)) markContextDead();
   }
+
+  window.addEventListener('unhandledrejection', (event) => {
+    if (isInvalidatedError(event.reason)) return;
+    console.warn('[Veil]', event.reason);
+  });
 })();

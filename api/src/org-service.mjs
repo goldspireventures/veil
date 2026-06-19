@@ -82,7 +82,7 @@ export async function joinWithCode(joinCode, deviceId, email) {
   );
 
   if (joinResult.rowCount === 0) {
-    console.warn('[org/join] no match for code:', code);
+    console.warn('[org/join] invalid or expired join code attempt');
     throw httpError(404, 'Invalid or expired join code.');
   }
 

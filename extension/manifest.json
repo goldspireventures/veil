@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Veil",
   "version": "1.2.3",
-  "description": "Browser security copilot by Goldspire. Highlight text → [redacted]. Recipients unlock on the same page.",
+  "description": "Protect secrets in email and web apps before you send. Free for personal use; teams get copilot, tokens, and policy sync.",
   "permissions": ["contextMenus", "storage", "activeTab", "scripting", "clipboardWrite", "alarms"],
   "host_permissions": ["<all_urls>"],
   "storage": {
@@ -62,6 +62,9 @@
         "src/policy/packs.js",
         "src/settings-migrate.js",
         "src/settings.js",
+        "src/org-capability.js",
+        "src/copy.js",
+        "src/status-notice.js",
         "src/resecure.js",
         "src/ui.js",
         "src/detector.js",

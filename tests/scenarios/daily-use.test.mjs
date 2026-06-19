@@ -31,7 +31,7 @@ function pasteEvent(text, target) {
 
 test('settings migrate coerces copilotEnabled to strict boolean', () => {
   const g = loadExtensionModule('extension/src/settings-migrate.js');
-  assert.equal(g.GoldspireSettingsMigrate.migrateSettings({ copilotEnabled: 'on' }).copilotEnabled, false);
+  assert.equal(g.GoldspireSettingsMigrate.migrateSettings({ copilotEnabled: 'on' }).copilotEnabled, true);
   assert.equal(g.GoldspireSettingsMigrate.migrateSettings({ copilotEnabled: true }).copilotEnabled, true);
 });
 

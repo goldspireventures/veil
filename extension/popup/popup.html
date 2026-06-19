@@ -113,7 +113,7 @@
               <button type="button" id="action-secure-options" class="btn btn--ghost">Secure with options…</button>
               <button type="button" id="action-unlock" class="btn btn--ghost">Unlock [redacted]</button>
             </div>
-            <p class="selection-tip"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> Quick · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> Options · Outlook: use the pill on the right</p>
+            <p class="selection-tip" id="selection-tip-shortcuts">Quick secure shortcut shown in Help tab</p>
           </div>
         </div>
 
@@ -300,11 +300,16 @@
             <div class="card">
               <h2>How it works</h2>
               <ol>
-                <li>Highlight a secret on any page</li>
-                <li>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> or click <strong>Secure</strong></li>
-                <li>Text becomes <code>[redacted]</code> — send as normal</li>
-                <li>Recipient clicks <code>[redacted]</code> and enters the passphrase to unlock</li>
+                <li>Open Gmail, Outlook, or any form</li>
+                <li>Paste or highlight a secret — Veil copilot offers <strong>Secure</strong> or <strong>Mask</strong></li>
+                <li>Or press the shortcut below to <strong>Secure selection</strong></li>
+                <li>Text becomes <code>[redacted]</code> — recipients unlock with your passphrase</li>
               </ol>
+              <p class="hint">Recipients without Veil can use the unlock link you share out of band.</p>
+            </div>
+            <div class="card">
+              <h2>Smart copilot</h2>
+              <p class="card__text">Stays quiet on signup forms and admin pages; still catches API keys and secrets in email and chat.</p>
             </div>
           </div>
           <div id="help-organization" class="help-content" hidden>
@@ -312,26 +317,30 @@
               <h2>Quick start</h2>
               <ol>
                 <li>Paste or highlight a secret in Outlook or Gmail compose</li>
-                <li>Choose <strong>Encrypt</strong>, <strong>Mask</strong>, or <strong>Tokenize</strong> from the Veil bar</li>
-                <li>Send as normal — recipients click <code>[redacted]</code> or <code>[veil:vt_…]</code> to reveal</li>
+                <li>Choose <strong>Secure</strong>, <strong>Mask</strong>, or <strong>Tokenize</strong> from the Veil bar or copilot</li>
+                <li>Send as normal — teammates click <code>[redacted]</code> or <code>[veil:vt_…]</code> to reveal</li>
               </ol>
             </div>
             <div class="card">
               <h2>Tokenize across email clients</h2>
-              <p class="card__text">Tokenize works when sending from Outlook to Gmail (and vice versa). Each browser needs Veil installed and your team joined. Use the same team passphrase.</p>
+              <p class="card__text">Tokenize needs a cloud team join. Works Outlook ↔ Gmail when both sides have Veil and the same team passphrase.</p>
             </div>
             <div class="card">
               <h2>Team setup</h2>
-              <p class="card__text">Your team passphrase syncs when you join. IT-managed installs receive it automatically via browser policy.</p>
+              <p class="card__text">Cloud join: passphrase syncs automatically — refresh mail after connecting. IT-managed: passphrase comes from browser policy; Tokenize may require cloud provisioning — ask your admin.</p>
+            </div>
+            <div class="card">
+              <h2>AI assistants</h2>
+              <p class="card__text">In ChatGPT, Claude, and similar, Veil offers <strong>Sanitize</strong> and <strong>Allow</strong> instead of Secure.</p>
             </div>
           </div>
           <div class="card">
             <h2>Keyboard shortcuts</h2>
-            <p class="card__text"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> secure · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd> unlock · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> generate password</p>
+            <p class="card__text" id="shortcut-hint">Secure · Options · Unlock · Generate password</p>
           </div>
           <div class="card">
-            <h2>Privacy</h2>
-            <p class="card__text">Encryption runs in your browser. Secured content is not sent to our servers. <a href="#" id="help-portal-link" target="_blank" rel="noopener">Team portal &amp; policies</a></p>
+            <h2>Privacy &amp; analytics</h2>
+            <p class="card__text">Encryption runs in your browser. Veil stores metadata-only security events for teams (never matched secrets). <a href="#" id="help-portal-link" target="_blank" rel="noopener" hidden>Team portal</a><a href="#" id="help-install-link" target="_blank" rel="noopener">Install guide</a> · <a href="#" id="help-privacy-link" target="_blank" rel="noopener">Privacy</a></p>
           </div>
           <div class="card">
             <h2>Feedback</h2>
@@ -354,6 +363,8 @@
       <p id="status" class="status" hidden></p>
     </main>
     <script src="../src/constants.js"></script>
+    <script src="../src/org-capability.js"></script>
+    <script src="../src/copy.js"></script>
     <script src="../src/feedback.js"></script>
     <script src="../src/passphrase-policy.js"></script>
     <script src="../src/browser.js"></script>
@@ -361,6 +372,7 @@
     <script src="../src/settings.js"></script>
     <script src="../src/secrets.js"></script>
     <script src="../src/managed-policy.js"></script>
+    <script src="../src/status-notice.js"></script>
     <script src="../src/org-provision.js"></script>
     <script src="popup.js"></script>
   </body>

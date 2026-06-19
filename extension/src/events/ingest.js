@@ -43,7 +43,9 @@
     if (!token || !deviceId) return { ok: false, reason: 'not_provisioned' };
 
     const settings = await global.GoldspireSettings?.load?.();
-    if (!settings?.orgId || settings.orgProvisionSource !== 'cloud') {
+    const canUpload = global.GoldspireOrgCapability?.canUseCloudApi?.(settings)
+      ?? (settings?.orgId && settings.orgProvisionSource === 'cloud');
+    if (!canUpload) {
       return { ok: false, reason: 'not_cloud' };
     }
 
@@ -69,7 +71,7 @@
     }
 
     if (response.status === 401) {
-      await global.GoldspireOrgProvision?.disconnectOrg?.();
+      await global.GoldspireOrgProvision?.disconnectOrg?.({ reason: 'revoked' });
       return { ok: false, reason: 'revoked' };
     }
 

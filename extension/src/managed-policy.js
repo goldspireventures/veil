@@ -67,6 +67,10 @@
     if (!gst?.storage?.sync?.get || !gst?.storage?.sync?.set) return;
 
     const current = await gst.storageGet('sync', { ...(global.GoldspireSettings?.DEFAULT_SETTINGS || {}) });
+    if (current.orgProvisionSource === 'cloud' && patch.orgProvisionSource === 'managed') {
+      const { orgProvisionSource, ...rest } = patch;
+      patch = rest;
+    }
     const merged = global.GoldspireSettings?.migrate?.({ ...current, ...patch }) || { ...current, ...patch };
     await new Promise((resolve) => {
       gst.storage.sync.set(merged, () => resolve());

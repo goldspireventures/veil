@@ -49,7 +49,7 @@
       <a href="install.html"${activePage === 'install' ? ' aria-current="page"' : ''}>Install</a>
       <a href="pricing.html"${activePage === 'pricing' ? ' aria-current="page"' : ''}>Pricing</a>
       <a href="feedback.html"${activePage === 'feedback' ? ' aria-current="page"' : ''}>Feedback</a>
-      <a href="admin.html"${activePage === 'admin' ? ' aria-current="page"' : ''}>Admin</a>
+      <a href="admin.html"${activePage === 'admin' ? ' aria-current="page"' : ''}>Admin sign-in</a>
     `;
   }
 
