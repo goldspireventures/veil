@@ -77,6 +77,7 @@
         headers: {
           'Content-Type': 'application/json',
           'X-Extension-Version': extensionVersion(),
+          'X-Ops-Ingest-Key': global.GoldspireConstants?.OPS_CLIENT_INGEST_KEY || '',
         },
         body: JSON.stringify({ events: pending }),
       });

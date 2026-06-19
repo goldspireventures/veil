@@ -11,6 +11,9 @@ function upstreamPath(pathname) {
 export default {
   async fetch(request) {
     const url = new URL(request.url);
+    if (url.pathname === '/ops.html' || url.pathname === '/portal/ops.js') {
+      return new Response('Not found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+    }
     const target = new URL(upstreamPath(url.pathname) + url.search, UPSTREAM);
     const init = {
       method: request.method,

@@ -70,6 +70,7 @@ const securityEmail = contactEmail(env, 'SECURITY_EMAIL', 'security@goldspireven
 const privacyEmail = contactEmail(env, 'PRIVACY_EMAIL', 'privacy@goldspireventures.com');
 const salesEmail = contactEmail(env, 'SALES_EMAIL', 'sales@goldspireventures.com');
 const legalEmail = contactEmail(env, 'LEGAL_EMAIL', 'legal@goldspireventures.com');
+const opsClientIngestKey = env.OPS_CLIENT_INGEST_KEY || '';
 const portalUnlockUrl = unlockUrl;
 const earlyAccess = String(env.VEIL_EARLY_ACCESS ?? 'true').toLowerCase() !== 'false';
 const stripePaymentLinkTeam = env.STRIPE_PAYMENT_LINK_TEAM ?? '';
@@ -110,6 +111,8 @@ const constantsContents = `/**
     SUPPORT_EMAIL: ${jsString(supportEmail)},
     /** Security vulnerability reports. */
     SECURITY_EMAIL: ${jsString(securityEmail)},
+    /** Client ops telemetry ingest key (metadata events only). */
+    OPS_CLIENT_INGEST_KEY: ${jsString(opsClientIngestKey)},
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);
 `;
@@ -142,7 +145,7 @@ writeFileSync(rootConstantsPath, constantsContents);
 writeFileSync(portalConfigPath, portalConfigContents);
 
 mkdirSync(join(apiPublicDir, 'portal'), { recursive: true });
-for (const file of ['common.css', 'app.js', 'config.js', 'nav.js', 'pricing.js', 'billing.js', 'policy-packs.js', 'feedback.js', 'contacts.js', 'ops.js', 'veil-mark.svg', 'favicon.png']) {
+for (const file of ['common.css', 'app.js', 'config.js', 'nav.js', 'pricing.js', 'billing.js', 'policy-packs.js', 'feedback.js', 'contacts.js', 'veil-mark.svg', 'favicon.png']) {
   cpSync(join(repoRoot, 'portal', file), join(apiPublicDir, 'portal', file), { force: true });
 }
 const unlockAssets = ['unlock.html', 'unlock.css', 'unlock.js'];
@@ -166,10 +169,12 @@ for (const page of [
   'privacy.html',
   'terms.html',
   'feedback.html',
-  'ops.html',
 ]) {
   cpSync(join(repoRoot, page), join(apiPublicDir, page), { force: true });
 }
+
+cpSync(join(repoRoot, 'api', 'ops', 'ops.html'), join(apiPublicDir, 'ops.html'), { force: true });
+cpSync(join(repoRoot, 'api', 'ops', 'ops.js'), join(apiPublicDir, 'portal', 'ops.js'), { force: true });
 
 console.log(`Applied .env → ${constantsPath}`);
 console.log(`Applied .env → ${rootConstantsPath}`);

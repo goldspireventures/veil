@@ -31,5 +31,7 @@
     SUPPORT_EMAIL: "support@goldspireventures.com",
     /** Security vulnerability reports. */
     SECURITY_EMAIL: "security@goldspireventures.com",
+    /** Client ops telemetry ingest key (metadata events only). */
+    OPS_CLIENT_INGEST_KEY: "da8a0cb6fd67e1c3c64ea0cbc7dd29fc8953c13aaf998cd0ec83a72da6e0cc38",
   };
 })(typeof globalThis !== 'undefined' ? globalThis : self);

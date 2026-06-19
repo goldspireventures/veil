@@ -41,8 +41,13 @@ import {
   ingestClientEvents,
   getOpsSummary,
   pingDatabase,
-  maybeRecordHealthCheck,
+  verifyOpsToken,
+  verifyClientIngestKey,
 } from './ops-service.mjs';
+import { checkRateLimit } from './rate-limit.mjs';
+import { normalizeRoute, recordRequestMetric, flushRequestMetrics } from './request-metrics.mjs';
+import { raiseOpsAlert } from './ops-alerts.mjs';
+import { startOpsMonitor } from './ops-monitor.mjs';
 
 const SERVER_STARTED_AT = Date.now();
 const apiRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -118,7 +123,7 @@ async function readBody(req) {
   }
 }
 
-function serveStatic(pathname, res) {
+function serveStatic(pathname, res, extraHeaders = {}) {
   const safePath = pathname.replace(/\.\./g, '');
   const filePath = join(publicDir, safePath === '/' ? 'join.html' : safePath);
   if (!filePath.startsWith(publicDir) || !existsSync(filePath)) return false;
@@ -129,14 +134,46 @@ function serveStatic(pathname, res) {
     '.js': 'text/javascript; charset=utf-8',
   };
   const body = readFileSync(filePath);
-  res.writeHead(200, { 'Content-Type': types[extname(filePath)] || 'application/octet-stream' });
+  res.writeHead(200, {
+    'Content-Type': types[extname(filePath)] || 'application/octet-stream',
+    ...extraHeaders,
+  });
   res.end(body);
   return true;
+}
+
+function rejectPortalOpsOnApi(req, res, pathname) {
+  const host = String(req.headers.host || '').toLowerCase();
+  const portalHost = (() => {
+    try {
+      return new URL(env.ORG_PORTAL_URL || '').hostname.toLowerCase();
+    } catch {
+      return '';
+    }
+  })();
+  if (pathname === '/ops.html' && portalHost && host === portalHost) {
+    json(res, req, 404, { error: 'Not found' });
+    return true;
+  }
+  return false;
 }
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const { pathname } = url;
+  const requestStarted = Date.now();
+  const routeKey = normalizeRoute(pathname);
+
+  res.on('finish', () => {
+    recordRequestMetric({
+      method: req.method || 'GET',
+      route: routeKey,
+      status: res.statusCode || 500,
+      durationMs: Date.now() - requestStarted,
+    });
+  });
+
+  if (rejectPortalOpsOnApi(req, res, pathname)) return;
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
@@ -159,7 +196,6 @@ const server = createServer(async (req, res) => {
         console.error('health: database ping failed', error);
       }
       const uptimeSec = Math.floor((Date.now() - SERVER_STARTED_AT) / 1000);
-      await maybeRecordHealthCheck({ ok: dbOk, dbOk, version, uptimeSec }).catch(() => {});
       json(res, req, dbOk ? 200 : 503, {
         ok: dbOk,
         db: dbOk ? 'ok' : 'down',
@@ -172,6 +208,18 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && pathname === '/v1/ops/client-events') {
+      const rl = checkRateLimit(req, 'ops-client-events', { limit: 40, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, {
+          error: 'Too many requests.',
+          message: 'Rate limit exceeded.',
+          retryAfterSec: rl.retryAfterSec,
+        });
+        return;
+      }
+      if (!verifyClientIngestKey(env, req)) {
+        throw httpError(401, 'Invalid ingest key.');
+      }
       if (!String(req.headers['content-type'] || '').includes('application/json')) {
         throw httpError(415, 'Content-Type must be application/json.');
       }
@@ -182,6 +230,15 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && pathname === '/v1/ops/summary') {
+      const rl = checkRateLimit(req, 'ops-summary', { limit: 30, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, {
+          error: 'Too many requests.',
+          message: 'Rate limit exceeded.',
+          retryAfterSec: rl.retryAfterSec,
+        });
+        return;
+      }
       const expected = String(env.PLATFORM_OPS_TOKEN || process.env.PLATFORM_OPS_TOKEN || '').trim();
       if (!expected) {
         throw httpError(503, 'Platform ops is not configured.');
@@ -189,7 +246,7 @@ const server = createServer(async (req, res) => {
       const auth = String(req.headers.authorization || '');
       const match = auth.match(/^Bearer\s+(.+)$/i);
       const provided = match ? match[1].trim() : '';
-      if (!provided || provided !== expected) {
+      if (!verifyOpsToken(expected, provided)) {
         throw httpError(401, 'Invalid ops token.');
       }
       const days = url.searchParams.get('days') || '7';
@@ -210,6 +267,11 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && pathname === '/v1/extension/org/join') {
+      const rl = checkRateLimit(req, 'org-join', { limit: 20, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
       if (!String(req.headers['content-type'] || '').includes('application/json')) {
         throw httpError(415, 'Content-Type must be application/json.');
       }
@@ -329,6 +391,11 @@ const server = createServer(async (req, res) => {
     // --- Organization admin (self-serve console) ---
 
     if (req.method === 'POST' && pathname === '/v1/orgs') {
+      const rl = checkRateLimit(req, 'org-create', { limit: 10, windowMs: 60_000 });
+      if (!rl.allowed) {
+        json(res, req, 429, { error: 'Too many requests.', retryAfterSec: rl.retryAfterSec });
+        return;
+      }
       if (!String(req.headers['content-type'] || '').includes('application/json')) {
         throw httpError(415, 'Content-Type must be application/json.');
       }
@@ -465,11 +532,19 @@ const server = createServer(async (req, res) => {
       '/privacy.html': 'privacy.html',
       '/terms.html': 'terms.html',
       '/feedback.html': 'feedback.html',
-      '/ops.html': 'ops.html',
       '/unlock.html': 'unlock.html',
     };
     if (req.method === 'GET' && portalPages[pathname]) {
       if (serveStatic(portalPages[pathname], res)) return;
+    }
+
+    if (req.method === 'GET' && pathname === '/ops.html') {
+      const opsHeaders = {
+        'X-Robots-Tag': 'noindex, nofollow',
+        'Cache-Control': 'no-store',
+        'X-Frame-Options': 'DENY',
+      };
+      if (serveStatic('ops.html', res, opsHeaders)) return;
     }
 
     if (req.method === 'GET' && pathname.startsWith('/portal/')) {
@@ -488,7 +563,16 @@ const server = createServer(async (req, res) => {
   } catch (err) {
     const status = err.status || 500;
     const message = err.message || 'Internal server error';
-    if (status >= 500) console.error(err);
+    if (status >= 500) {
+      console.error(err);
+      raiseOpsAlert({
+        key: `api_5xx_${routeKey}`,
+        severity: 'error',
+        title: `Veil API ${status} on ${req.method} ${routeKey}`,
+        body: message,
+        env,
+      }).catch(() => {});
+    }
     json(res, req, status, { error: message, message });
   }
 });
@@ -496,16 +580,20 @@ const server = createServer(async (req, res) => {
 server.listen(port, '0.0.0.0', () => {
   console.log(`Goldspire org API listening on port ${port}`);
   console.log(`Join portal: http://localhost:${port}/veil/join`);
+  console.log(`Platform ops: http://localhost:${port}/ops.html`);
 });
 
-const SELF_HEALTH_MS = 5 * 60 * 1000;
+const API_VERSION = process.env.npm_package_version || '1.2.3';
+startOpsMonitor(env, {
+  version: API_VERSION,
+  uptimeSec: () => Math.floor((Date.now() - SERVER_STARTED_AT) / 1000),
+});
+
 setInterval(() => {
-  const version = process.env.npm_package_version || '1.2.3';
-  const uptimeSec = Math.floor((Date.now() - SERVER_STARTED_AT) / 1000);
-  pingDatabase()
-    .then((dbOk) => maybeRecordHealthCheck({ ok: dbOk, dbOk, version, uptimeSec }))
-    .catch(() => maybeRecordHealthCheck({ ok: false, dbOk: false, version, uptimeSec }));
-}, SELF_HEALTH_MS).unref?.();
+  flushRequestMetrics().catch((error) => {
+    console.error('request-metrics periodic flush failed', error);
+  });
+}, 60_000).unref?.();
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, async () => {

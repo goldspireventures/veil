@@ -36,11 +36,16 @@ Use this before announcing Veil publicly or onboarding paying customers.
 
 ## Operations
 
-- [ ] Production API healthy (`/health`)
-- [ ] Database backups configured
+- [ ] `npm test` passes (100 tests)
+- [ ] Production API healthy (`/health` returns `db: ok`)
+- [ ] `npm run db:migrate` applied on production (through `010_ops_hardening.sql`)
+- [ ] Platform ops dashboard: `https://veil-api.goldspireventures.com/ops.html`
+- [ ] `PLATFORM_OPS_TOKEN` and `OPS_CLIENT_INGEST_KEY` set on Railway (+ local `.env` for extension builds)
+- [ ] Optional: `OPS_ALERT_WEBHOOK_URL` for Slack/Discord alerts
+- [ ] Database backups configured (Supabase)
 - [x] User feedback path (popup, portal, context menu)
-- [ ] Error/uptime monitoring on API host (configure UptimeRobot/Better Stack on `/health`)
-- [ ] Incident contact documented
+- [x] In-house uptime + synthetic portal checks (no UptimeRobot required)
+- [ ] Incident contact documented (`docs/OPS.md`)
 - [ ] Stripe: `npm run stripe:setup` → payment link in `.env` → `npm run env:apply`
 - [ ] Stripe webhook → `https://veil-api.goldspireventures.com/v1/webhooks/stripe` + `STRIPE_WEBHOOK_SECRET` on Railway
 - [ ] Portal deployed (`join-veil`) with `EARLY_ACCESS` + payment link in `portal/config.js`
