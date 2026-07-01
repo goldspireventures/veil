@@ -20,16 +20,42 @@
     return 'Any work email can join with your join code.';
   }
 
+  function initBrandChrome() {
+    document.querySelectorAll('.brand:not([data-brand-ready])').forEach((brand) => {
+      brand.dataset.brandReady = '1';
+      const mark = brand.querySelector('.brand__mark');
+      if (mark && !mark.src.includes('icons/icon-48')) {
+        mark.src = 'icons/icon-48.png';
+      }
+      if (!brand.closest('a.brand-link')) {
+        const link = document.createElement('a');
+        link.href = 'index.html';
+        link.className = 'brand-link';
+        link.setAttribute('aria-label', 'Veil home');
+        brand.parentNode.insertBefore(link, brand);
+        link.appendChild(brand);
+      }
+    });
+  }
+
+  function navHomeLink() {
+    return `<a href="index.html" class="nav-home" aria-label="Veil home"><img src="icons/icon-48.png" alt="" width="26" height="26" /><span class="nav-home__text">Veil</span></a>`;
+  }
+
   function renderPortalNav(activePage) {
     const nav = document.querySelector('[data-portal-nav]');
     if (!nav) return;
 
+    initBrandChrome();
+
     const app = global.GoldspirePortalApp;
     const session = app?.loadAdminSession?.();
+    const inHeader = Boolean(nav.closest('.site-header'));
 
     if (session?.adminToken) {
       const orgName = escapeHtml(session.displayName || 'Your team');
       nav.innerHTML = `
+        ${inHeader ? '' : navHomeLink()}
         <a href="index.html"${activePage === 'index' ? ' aria-current="page"' : ''}>Home</a>
         <a href="admin.html"${activePage === 'admin' ? ' aria-current="page"' : ''}>${orgName}</a>
         <a href="join.html"${activePage === 'join' ? ' aria-current="page"' : ''}>Invite members</a>
@@ -43,6 +69,7 @@
     }
 
     nav.innerHTML = `
+      ${inHeader ? '' : navHomeLink()}
       <a href="index.html"${activePage === 'index' ? ' aria-current="page"' : ''}>Home</a>
       <a href="create.html"${activePage === 'create' ? ' aria-current="page"' : ''}>Set up team</a>
       <a href="join.html"${activePage === 'join' ? ' aria-current="page"' : ''}>Join</a>
@@ -76,5 +103,6 @@
     renderPortalNav,
     renderPortalFooter,
     membershipSummary,
+    initBrandChrome,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

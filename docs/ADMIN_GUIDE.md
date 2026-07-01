@@ -19,7 +19,7 @@ For **IT admins and team owners**. Goal: set up your org end-to-end without supp
 6. **Save immediately:** admin sign-in key, join code — **admin key is shown once only**
 7. Copy the **invite email** from the success screen
 
-Early access: team cloud is free; no card required. After general availability, subscribe in **Admin → Overview → Billing**. See [pricing](https://veil.goldspireventures.com/pricing.html).
+Early access is off. Team cloud requires a card in **Admin → Overview → Billing** after setup (short trial included). See [pricing](https://veil.goldspireventures.com/pricing.html).
 
 ---
 

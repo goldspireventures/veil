@@ -65,6 +65,9 @@
     const endLine = endLabel
       ? ` Free until <strong>${endLabel}</strong> — then list prices apply.`
       : ' List prices apply at general availability;';
+    const endLine = endLabel
+      ? ` Free until <strong>${endLabel}</strong> — then list prices apply.`
+      : ' List prices apply at general availability;';
     container.innerHTML = `
       <div class="banner banner--success" role="status">
         <strong>Early access — no payment required.</strong>

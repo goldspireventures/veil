@@ -63,28 +63,53 @@
     }).format(amount);
   }
 
+  function priceRow(currency) {
+    return LIST_PRICES[currency] || LIST_PRICES.USD;
+  }
+
   function apply() {
     const currency = detectCurrency();
-    const row = LIST_PRICES[currency] || LIST_PRICES.USD;
+    const row = priceRow(currency);
     const locale = navigator.language || row.locale;
+    const teamMonthly = row.team;
+    const teamAnnual = teamMonthly * 12;
+    const usd = LIST_PRICES.USD;
 
     const teamEl = document.querySelector('[data-price-team]');
     const enterpriseEl = document.querySelector('[data-price-enterprise]');
     const noteEl = document.querySelector('[data-price-currency-note]');
 
     if (teamEl) {
-      teamEl.innerHTML = `${formatMoney(row.team, currency, locale)} <span class="price-card__unit">/ user / mo</span>`;
+      teamEl.innerHTML = `${formatMoney(teamMonthly, currency, locale)} <span class="price-card__unit">/ user / mo</span>`;
     }
     if (enterpriseEl) {
       enterpriseEl.textContent = `From ${formatMoney(row.enterpriseFrom, currency, locale)} / user / mo at 100+ seats (annual billing)`;
     }
+
+    document.querySelectorAll('[data-local-price="team-annual"]').forEach((el) => {
+      el.textContent = `${formatMoney(teamAnnual, currency, locale)} / user / year`;
+    });
+    document.querySelectorAll('[data-local-price="team-monthly"]').forEach((el) => {
+      el.textContent = `${formatMoney(teamMonthly, currency, locale)} / user / mo`;
+    });
+    document.querySelectorAll('[data-local-price="team-annual-equiv"]').forEach((el) => {
+      el.textContent = `${formatMoney(teamAnnual, currency, locale)} / user / year (${formatMoney(teamMonthly, currency, locale)} / mo)`;
+    });
+    document.querySelectorAll('[data-local-price="billing-line"]').forEach((el) => {
+      el.innerHTML = `<strong>${formatMoney(teamAnnual, currency, locale)} / user / year</strong> (min. 5 seats), billed annually through Stripe.`;
+    });
+
     if (noteEl && currency !== 'USD') {
-      noteEl.textContent = `Prices shown in ${currency} for your region. USD list: $7 / user / mo ($84 / user / year, min. 5 seats).`;
+      const usdAnnual = usd.team * 12;
+      noteEl.textContent = `Prices in ${currency} for your region. USD list: ${formatMoney(usd.team, 'USD', 'en-US')} / user / mo (${formatMoney(usdAnnual, 'USD', 'en-US')} / year, min. 5 seats).`;
       noteEl.hidden = false;
+    } else if (noteEl) {
+      noteEl.hidden = true;
+      noteEl.textContent = '';
     }
   }
 
-  global.GoldspirePricing = { apply, detectCurrency, formatMoney };
+  global.GoldspirePricing = { apply, detectCurrency, formatMoney, priceRow };
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', apply);
   } else {

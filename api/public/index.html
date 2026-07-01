@@ -6,14 +6,13 @@
   <meta name="description" content="Veil by Goldspire — browser-native protection for sensitive text in email and web apps. Encrypt before send, unlock in place." />
   <title>Veil — protect sensitive text before you send</title>
   <link rel="stylesheet" href="portal/common.css" />
-  <link rel="icon" href="portal/favicon.png" sizes="48x48" />
-  <link rel="icon" href="portal/veil-mark.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
 </head>
 <body>
   <div class="layout layout--wide">
     <header class="site-header">
       <div class="brand">
-        <img class="brand__mark" src="portal/veil-mark.svg" alt="" width="42" height="42" />
+        <img class="brand__mark" src="icons/icon-48.png" alt="" width="42" height="42" />
         <div>
           <strong class="brand__name">Veil</strong>
           <span class="brand__byline">by Goldspire</span>
@@ -23,8 +22,8 @@
     </header>
 
     <div class="trust-strip">
-      <span class="trust-strip__badge">✓ Live on Microsoft Edge</span>
-      <span>Browser-native · Local encryption · Metadata-only team analytics</span>
+      <span class="trust-strip__badge">✓ Live on Microsoft Edge &amp; Chrome</span>
+      <span>Available worldwide · Browser-native · Local encryption</span>
     </div>
 
     <section class="hero card hero--premium">
@@ -65,23 +64,23 @@
     </section>
 
     <section class="card card--flat">
-      <h2>Built for regulated teams</h2>
-      <p class="lede">Veil detects 20+ sensitive data types while you type or paste — then maps them to frameworks your auditors already ask about.</p>
+      <h2>Built for global teams</h2>
+      <p class="lede">Veil is listed in the Chrome and Edge stores worldwide. Detection runs in your browser — copilot sees paste and typing locally, not on a regional server.</p>
+      <p class="hint">We validate country-specific formats where standards exist, and flag labeled or high-confidence patterns everywhere else. Policy packs map detections to GDPR, HIPAA, PCI DSS, and SOC 2 context before you send.</p>
       <div class="grid-3">
         <div>
           <h3>Financial</h3>
-          <p class="hint">Credit cards, IBANs (including while typing), SWIFT/BIC, routing numbers, tax/VAT IDs, bank accounts.</p>
+          <p class="hint">Credit cards (Luhn), IBANs with check digits, SWIFT/BIC, EU VAT (AT, DE, FR, GB, IE, NL), US EIN patterns, bank routing.</p>
         </div>
         <div>
-          <h3>Healthcare</h3>
-          <p class="hint">MRNs, NHS numbers, SSNs, dates of birth, passports — with HIPAA-oriented policy pack.</p>
+          <h3>Healthcare &amp; identity</h3>
+          <p class="hint">Labeled MRNs, UK NHS (Mod-11), US SSNs, Irish PPS, UK NINO patterns, dates of birth, passports, driver licences.</p>
         </div>
         <div>
-          <h3>Secrets &amp; identity</h3>
-          <p class="hint">API keys, JWTs, passwords, emails, phones, national IDs, driver licences, internal ticket refs.</p>
+          <h3>Secrets &amp; contact</h3>
+          <p class="hint">API keys, JWTs, passwords, emails, phone numbers, internal ticket refs — across mail, forms, and AI chat surfaces.</p>
         </div>
       </div>
-      <p class="hint">Apply a <strong>policy pack</strong> in admin — Finance, Healthcare, GDPR/EU, Engineering, or observational rollout. Copilot shows the regulation context (e.g. GDPR, PCI DSS) before you send.</p>
       <div class="btn-row">
         <a class="btn btn--ghost btn--sm" href="create.html">Set up team + policy pack</a>
         <a class="btn btn--ghost btn--sm" href="pricing.html">See pricing</a>
@@ -129,8 +128,8 @@
         <li><strong>Members</strong> install Veil and join with work email.</li>
         <li><strong>Everyone</strong> secures secrets in mail and web apps; admins apply a policy pack and review metadata-only activity.</li>
       </ol>
-      <p class="hint" data-billing-phase="early">IT can deploy the extension and team passphrase via Chrome or Edge policy — members skip manual setup. <a href="pricing.html">Team cloud is free during early access</a> ($84 / user / year at general availability).</p>
-      <p class="hint" data-billing-phase="paid" hidden>IT can deploy the extension and team passphrase via Chrome or Edge policy. <a href="pricing.html">Team cloud</a> is $84 / user / year (minimum 5 seats).</p>
+      <p class="hint" data-billing-phase="paid">IT can deploy via Chrome or Edge policy. <a href="pricing.html">Team cloud</a> is billed annually per seat — card required after the trial.</p>
+      <p class="hint" data-billing-phase="early" hidden>IT can deploy via Chrome or Edge policy. <a href="pricing.html">Team cloud is free during early access</a>.</p>
     </section>
 
     <section class="trust card card--flat">

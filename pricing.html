@@ -3,17 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Veil pricing — free personal use, self-serve team and enterprise plans, custom contracts for large deployments." />
+  <meta name="description" content="Veil pricing — free personal use, team and enterprise cloud with policy packs and admin controls." />
   <title>Pricing — Veil by Goldspire</title>
   <link rel="stylesheet" href="portal/common.css" />
-  <link rel="icon" href="portal/favicon.png" sizes="48x48" />
-  <link rel="icon" href="portal/veil-mark.svg" type="image/svg+xml" />
+  <link rel="icon" href="icons/icon-48.png" sizes="48x48" />
 </head>
 <body>
   <div class="layout layout--wide">
     <header class="site-header">
       <div class="brand">
-        <img class="brand__mark" src="portal/veil-mark.svg" alt="" width="42" height="42" />
+        <img class="brand__mark" src="icons/icon-48.png" alt="" width="42" height="42" />
         <div>
           <strong class="brand__name">Veil</strong>
           <span class="brand__byline">by Goldspire</span>
@@ -26,11 +25,11 @@
       <p class="eyebrow">Pricing</p>
       <h1>Start free. Scale when your team is ready.</h1>
       <p class="lede hero__lede">
-        Personal use is free in the browser. Organizations get admin controls, policy packs, and team sharing —
-        set up online in minutes, no sales call required.
+        Personal use is free in the browser. Team cloud adds admin, policy packs, and token storage —
+        billed annually per seat through Stripe.
       </p>
-      <p class="hint" data-billing-phase="early">Team and Enterprise cloud are <strong>free during early access</strong>. List prices below apply at general availability — no card required today.</p>
-      <p class="hint" data-billing-phase="paid" hidden>Team cloud is <strong>$84 / user / year</strong> (minimum 5 seats), billed through Stripe. Enterprise volume from 100+ seats — contact sales.</p>
+      <p class="hint" data-billing-phase="paid">Team cloud requires a payment card. New organizations get a short trial, then an active subscription to keep admin sync and joins.</p>
+      <p class="hint" data-billing-phase="early" hidden>Team and Enterprise cloud are <strong>free during early access</strong>. List prices below apply at general availability.</p>
       <div data-early-access-banner hidden></div>
       <p class="hint" data-price-currency-note hidden></p>
     </section>
@@ -39,12 +38,11 @@
       <div class="card card--flat price-card">
         <p class="eyebrow">Personal</p>
         <p class="price-card__amount">Free</p>
-        <p class="hint">One browser profile</p>
+        <p class="hint">One browser profile · no account</p>
         <ul class="trust-list">
           <li>Inline <code>[redacted]</code> encrypt &amp; unlock</li>
           <li>Veil copilot on paste &amp; typing</li>
           <li>Hosted unlock links for recipients</li>
-          <li>Password generator</li>
         </ul>
         <a class="btn btn--ghost" href="install.html">Install free</a>
       </div>
@@ -52,14 +50,12 @@
       <div class="card price-card price-card--featured">
         <p class="eyebrow">Team</p>
         <p class="price-card__amount" data-price-team>$7 <span class="price-card__unit">/ user / mo</span></p>
-        <p class="hint" data-billing-phase="early">$84 / user / year (equivalent to $7 / mo) · min. 5 seats · <strong>free now</strong> in early access</p>
-        <p class="hint" data-billing-phase="paid" hidden>$84 / user / year (equivalent to $7 / mo) · min. 5 seats · billed annually</p>
+        <p class="hint"><span data-local-price="team-annual-equiv"></span> · min. 5 seats · card required</p>
         <ul class="trust-list">
           <li>Everything in Personal</li>
           <li>Org admin, join codes, member directory</li>
           <li>Policy packs: Finance, Healthcare, GDPR, Engineering</li>
-          <li>Team tokens &amp; direct-share keys</li>
-          <li>Security events &amp; SIEM webhook</li>
+          <li>Team tokens, SIEM webhook, security events</li>
         </ul>
         <a class="btn" href="create.html">Set up your team</a>
       </div>
@@ -73,7 +69,6 @@
           <li>Sub-teams &amp; custom policy overlays</li>
           <li>Chrome / Edge managed policy deployment</li>
           <li>Priority support queue</li>
-          <li>Same online setup — create your org, invite members</li>
         </ul>
         <a class="btn" href="create.html">Create organization</a>
       </div>
@@ -81,12 +76,11 @@
       <div class="card card--flat price-card">
         <p class="eyebrow">Custom</p>
         <p class="price-card__amount">Let’s talk</p>
-        <p class="hint">Volume pricing, annual contracts, hands-on rollout</p>
+        <p class="hint">Volume pricing &amp; hands-on rollout</p>
         <ul class="trust-list">
           <li>Dedicated onboarding workshop</li>
           <li>MDM / Intune rollout support</li>
           <li>Security review &amp; procurement pack</li>
-          <li>Custom terms &amp; multi-year agreements</li>
         </ul>
         <a class="btn btn--ghost" href="#" data-contact-href="sales" data-mail-subject="Veil Custom plan">Contact sales</a>
       </div>
@@ -101,35 +95,23 @@
         </div>
         <div>
           <h3>Team &amp; Enterprise</h3>
-          <p class="hint" data-billing-phase="early">Create your organization online — free during early access. At general availability, Team is <strong>$84 / user / year</strong> (minimum 5 seats), billed through Stripe.</p>
-          <p class="hint" data-billing-phase="paid" hidden>Create your organization online. Team is <strong>$84 / user / year</strong> (minimum 5 seats), billed through Stripe. New teams get a short trial before subscription is required.</p>
+          <p class="hint" data-billing-phase="paid">Create your organization online, then subscribe in <strong>Admin → Overview → Billing</strong>. <span data-local-price="billing-line"></span></p>
+          <p class="hint" data-billing-phase="early" hidden>Free during early access; list prices apply at general availability.</p>
         </div>
         <div>
           <h3>Custom</h3>
-          <p class="hint">For large deployments, regulated procurement, or rollout support beyond self-serve. We’ll align on seats, term, and onboarding with your IT team.</p>
+          <p class="hint">Large deployments, regulated procurement, or rollout support beyond self-serve.</p>
         </div>
       </div>
     </section>
 
     <section class="card">
-      <h2>Personal — free</h2>
+      <h2>Get started</h2>
       <ol class="steps">
-        <li><a href="install.html">Install Veil</a> from Edge or Chrome.</li>
-        <li>Choose <strong>Personal</strong> in the popup and set a passphrase.</li>
-        <li>Secure secrets in email and forms — copilot helps on paste.</li>
-      </ol>
-      <div class="btn-row">
-        <a class="btn btn--ghost" href="install.html">Install extension</a>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Teams — get started in four steps</h2>
-      <ol class="steps">
-        <li>Create your organization and save your admin sign-in key.</li>
-        <li>Choose a <strong>policy pack</strong> for your industry in the admin console.</li>
-        <li>Members install Veil and join with your code and work email.</li>
-        <li>Review activity metadata in admin or forward events to your SIEM.</li>
+        <li><a href="install.html">Install Veil</a> for personal use, or <a href="create.html">create a team</a> for cloud admin.</li>
+        <li>Choose a <strong>policy pack</strong> in the admin console.</li>
+        <li>Members install and join with your code and work email.</li>
+        <li>Subscribe with a card before the trial ends to keep team cloud access.</li>
       </ol>
       <div class="btn-row">
         <a class="btn" href="create.html">Create organization</a>

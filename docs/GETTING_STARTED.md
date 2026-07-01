@@ -32,7 +32,7 @@ See [ADMIN_GUIDE.md — Policy packs & sub-teams](ADMIN_GUIDE.md#4-policy-packs-
 
 ## Pricing
 
-Team cloud is **free during early access** (no card). At general availability: **$84 / user / year** (min. 5 seats), enforced by the API after a short trial. Details on the [pricing page](https://veil.goldspireventures.com/pricing.html) and in [BILLING.md](BILLING.md) (internal).
+Team cloud is **billed annually per seat** (card required after a short trial). Details on the [pricing page](https://veil.goldspireventures.com/pricing.html) and in [BILLING.md](BILLING.md) (internal).
 
 ## Still stuck?
 

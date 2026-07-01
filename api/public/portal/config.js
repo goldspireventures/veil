@@ -7,7 +7,7 @@
     PORTAL_URL: "https://veil.goldspireventures.com/join.html",
     PORTAL_ORIGIN: "https://veil.goldspireventures.com",
     UNLOCK_URL: "https://veil.goldspireventures.com/unlock.html",
-    EARLY_ACCESS: true,
+    EARLY_ACCESS: false,
     EARLY_ACCESS_END: "",
     STRIPE_PAYMENT_LINK_TEAM: "https://buy.stripe.com/28EbJ30JL7RU8q1cKj0Ny00",
     STRIPE_BILLING_PORTAL_URL: "",
