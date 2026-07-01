@@ -5,5 +5,6 @@ account_id = "122a4ff1db00628ade8c3dcbe8e68a9c"
 
 routes = [
   { pattern = "veil.goldspireventures.com", custom_domain = true },
-  { pattern = "join-veil.goldspireventures.com", custom_domain = true }
+  { pattern = "join-veil.goldspireventures.com", custom_domain = true },
+  { pattern = "join-secure-text.goldspireventures.com/*", zone_name = "goldspireventures.com" }
 ]

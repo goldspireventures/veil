@@ -714,6 +714,205 @@
     return results;
   }
 
+  const INVALID_NINO_PREFIXES = new Set(['BG', 'GB', 'NK', 'KN', 'TN', 'NT', 'ZZ']);
+
+  function australianTfnCheck(digits) {
+    const d = normalizeDigits(digits);
+    if (!/^\d{9}$/.test(d)) return false;
+    const weights = [1, 4, 3, 7, 5, 8, 6, 9];
+    let sum = 0;
+    for (let i = 0; i < 8; i += 1) sum += Number(d[i]) * weights[i];
+    let check = 11 - (sum % 11);
+    if (check === 11) check = 0;
+    if (check === 10) return false;
+    return Number(d[8]) === check;
+  }
+
+  function ukNinoCheck(raw) {
+    const upper = String(raw).toUpperCase().replace(/\s/g, '');
+    const match = upper.match(/^([A-CEGHJ-PR-TW-Z]{2})(\d{6})([A-D])$/);
+    if (!match) return false;
+    return !INVALID_NINO_PREFIXES.has(match[1]);
+  }
+
+  function singaporeNricCheck(raw) {
+    const upper = String(raw).toUpperCase().replace(/\s/g, '');
+    const match = upper.match(/^([STFGM])(\d{7})([A-Z])$/);
+    if (!match) return false;
+    const weights = [2, 7, 6, 5, 4, 3, 2];
+    let sum = 0;
+    for (let i = 0; i < 7; i += 1) sum += Number(match[2][i]) * weights[i];
+    const st = 'JZIHGFEDCBA';
+    const fg = 'XWUTRQPNMLK';
+    const offsets = { S: 0, T: 4, F: 0, G: 4, M: 3 };
+    const alpha = (match[1] === 'S' || match[1] === 'T') ? st : fg;
+    const expected = alpha[(sum + (offsets[match[1]] || 0)) % 11];
+    return match[3] === expected;
+  }
+
+  function aadhaarVerhoeffCheck(digits) {
+    const d = normalizeDigits(digits);
+    if (!/^[2-9]\d{11}$/.test(d)) return false;
+    const inv = [0, 4, 3, 2, 1, 5, 6, 7, 8, 9];
+    const dTable = [
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      [1, 2, 3, 4, 0, 6, 7, 8, 9, 5],
+      [2, 3, 4, 0, 1, 7, 8, 9, 5, 6],
+      [3, 4, 0, 1, 2, 8, 9, 5, 6, 7],
+      [4, 0, 1, 2, 3, 9, 5, 6, 7, 8],
+      [5, 9, 8, 7, 6, 0, 4, 3, 2, 1],
+      [6, 5, 9, 8, 7, 1, 0, 4, 3, 2],
+      [7, 6, 5, 9, 8, 2, 1, 0, 4, 3],
+      [8, 7, 6, 5, 9, 3, 2, 1, 0, 4],
+      [9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+    ];
+    const pTable = [
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      [1, 5, 7, 6, 2, 8, 3, 0, 9, 4],
+      [5, 8, 0, 3, 7, 9, 6, 1, 4, 2],
+      [8, 9, 1, 6, 0, 4, 3, 5, 2, 7],
+      [9, 4, 5, 3, 1, 2, 6, 8, 7, 0],
+      [4, 2, 8, 6, 5, 7, 3, 9, 0, 1],
+      [2, 7, 9, 3, 8, 0, 6, 4, 1, 5],
+      [7, 0, 4, 6, 9, 1, 3, 2, 5, 8],
+    ];
+    let c = 0;
+    const reversed = d.split('').reverse();
+    for (let i = 0; i < reversed.length; i += 1) {
+      c = dTable[c][pTable[i % 8][Number(reversed[i])]];
+    }
+    return c === 0;
+  }
+
+  function canadianSinCheck(digits) {
+    const d = normalizeDigits(digits);
+    if (!/^\d{9}$/.test(d) || d.startsWith('0')) return false;
+    let sum = 0;
+    let alternate = false;
+    for (let i = d.length - 1; i >= 0; i -= 1) {
+      let n = Number(d[i]);
+      if (alternate) {
+        n *= 2;
+        if (n > 9) n -= 9;
+      }
+      sum += n;
+      alternate = !alternate;
+    }
+    return sum % 10 === 0;
+  }
+
+  function findRegionalNationalIds(text) {
+    const input = String(text || '');
+    if (!input) return [];
+    const results = [];
+    const seen = new Set();
+
+    function push(hit) {
+      const key = String(hit.matchedTextRaw || '').toUpperCase().replace(/\s/g, '');
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      results.push(hit);
+    }
+
+    let match;
+    const sinPattern = /\b(?:SIN|social insurance)[#:\s-]*(\d{3})[\s-]?(\d{3})[\s-]?(\d{3})\b/gi;
+    while ((match = sinPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`;
+      if (!canadianSinCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 3 }),
+        matchedTextRaw: match[0].includes('-') || match[0].includes(' ') ? `${match[1]}-${match[2]}-${match[3]}` : raw,
+        index: match.index,
+        confidence: 86,
+        severity: 'critical',
+        recommendation: 'Canadian SIN — do not share in plain text.',
+        tags: ['sin', 'ca'],
+      });
+    }
+
+    const tfnPattern = /\b(?:TFN|tax file)[#:\s-]*(\d{3})[\s-]?(\d{3})[\s-]?(\d{3})\b/gi;
+    while ((match = tfnPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`;
+      if (!australianTfnCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 3 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 86,
+        severity: 'high',
+        recommendation: 'Australian TFN — do not share in plain text.',
+        tags: ['tfn', 'au'],
+      });
+    }
+
+    const ninoPattern = /\b(?:NINO|NI number|national insurance)[#:\s-]*([A-CEGHJ-PR-TW-Z]{2})[\s-]?(\d{2})[\s-]?(\d{2})[\s-]?(\d{2})[\s-]?([A-D])\b/gi;
+    while ((match = ninoPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}${match[4]}${match[5]}`.toUpperCase();
+      if (!ukNinoCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 1 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 88,
+        severity: 'high',
+        recommendation: 'UK National Insurance number — do not share in plain text.',
+        tags: ['nino', 'gb'],
+      });
+    }
+
+    const nricPattern = /\b([STFGM]\d{7}[A-Z])\b/gi;
+    while ((match = nricPattern.exec(input)) !== null) {
+      const raw = match[1].toUpperCase();
+      if (!singaporeNricCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 1 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 88,
+        severity: 'high',
+        recommendation: 'Singapore NRIC/FIN — do not share in plain text.',
+        tags: ['nric', 'sg'],
+      });
+    }
+
+    const aadhaarPattern = /\b(?:aadhaar|uid)[#:\s-]*([2-9]\d{3})[\s-]?(\d{4})[\s-]?(\d{4})\b/gi;
+    while ((match = aadhaarPattern.exec(input)) !== null) {
+      const raw = `${match[1]}${match[2]}${match[3]}`;
+      if (!aadhaarVerhoeffCheck(raw)) continue;
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 4 }),
+        matchedTextRaw: raw,
+        index: match.index,
+        confidence: 88,
+        severity: 'critical',
+        recommendation: 'Indian Aadhaar — do not share in plain text.',
+        tags: ['aadhaar', 'in'],
+      });
+    }
+
+    const inseePattern = /\b(?:INSEE|sécurité sociale|securite sociale|nir)[#:\s-]*([12]\d{2}(?:0[1-9]|1[0-2])\d{2}\d{3}\d{3}\d{2})\b/gi;
+    while ((match = inseePattern.exec(input)) !== null) {
+      const raw = match[1];
+      push({
+        category: 'national_id',
+        matchedText: redactPreview(raw, { showLast: 2 }),
+        matchedTextRaw: raw,
+        index: match.index + match[0].indexOf(raw),
+        confidence: 84,
+        severity: 'high',
+        recommendation: 'French social security number — do not share in plain text.',
+        tags: ['insee', 'fr'],
+      });
+    }
+
+    return results;
+  }
+
   function findNationalIds(text) {
     const input = String(text || '');
     if (!input) return [];
@@ -722,14 +921,15 @@
       /\b[A-Z]{2}\d{6}[A-Z]?\b/g,
       /\bNINO[:\s-]?[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]?\b/gi,
     ];
-    const results = [...findPpsNumbers(input)];
-    const seen = new Set(results.map((hit) => String(hit.matchedTextRaw || '').toUpperCase()));
+    const results = [...findRegionalNationalIds(input), ...findPpsNumbers(input)];
+    const seen = new Set(results.map((hit) => String(hit.matchedTextRaw || '').toUpperCase().replace(/\s/g, '')));
     for (const re of patterns) {
       let match;
       while ((match = re.exec(input)) !== null) {
         const raw = match[0];
-        const key = raw.toUpperCase();
+        const key = raw.toUpperCase().replace(/\s/g, '');
         if (seen.has(key)) continue;
+        if (re.source.includes('NINO') && !ukNinoCheck(raw.replace(/^NINO[:\s-]?/i, ''))) continue;
         seen.add(key);
         results.push({
           category: 'national_id',
@@ -790,20 +990,33 @@
   function findMedicalRecordNumbers(text) {
     const input = String(text || '');
     if (!input) return [];
-    const pattern = /\b(?:MRN|medical record)[#:\s-]*(\d{6,12})\b/gi;
     const results = [];
+    const seen = new Set();
+    const patterns = [
+      /\b(?:MRN|medical record)[#:\s-]*(\d{6,12})\b/gi,
+      /\b(?:medicare|IRN)[#:\s-]*(\d{4})[\s-]?(\d{5})[\s-]?(\d)\b/gi,
+    ];
     let match;
-    while ((match = pattern.exec(input)) !== null) {
-      const raw = match[1];
-      results.push({
-        category: 'medical_record_number',
-        matchedText: redactPreview(raw, { showLast: 2 }),
-        matchedTextRaw: raw,
-        index: match.index + match[0].indexOf(raw),
-        confidence: 80,
-        severity: 'critical',
-        recommendation: 'HIPAA-sensitive — do not share medical identifiers.',
-      });
+    for (const pattern of patterns) {
+      while ((match = pattern.exec(input)) !== null) {
+        const raw = match[3] != null ? `${match[1]}${match[2]}${match[3]}` : match[1];
+        const key = raw;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const isMedicare = match[3] != null;
+        results.push({
+          category: isMedicare ? 'nhs_number' : 'medical_record_number',
+          matchedText: redactPreview(raw, { showLast: 2 }),
+          matchedTextRaw: match[0],
+          index: match.index,
+          confidence: isMedicare ? 84 : 80,
+          severity: 'critical',
+          recommendation: isMedicare
+            ? 'Australian Medicare number — personal health data.'
+            : 'HIPAA-sensitive — do not share medical identifiers.',
+          tags: isMedicare ? ['medicare', 'au'] : ['mrn'],
+        });
+      }
     }
     return results;
   }
@@ -978,6 +1191,7 @@
     findSsns,
     findBankAccounts,
     findNationalIds,
+    findRegionalNationalIds,
     findPassports,
     findDriverLicenses,
     findMedicalRecordNumbers,
